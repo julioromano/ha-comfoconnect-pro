@@ -1,0 +1,76 @@
+{
+  "title": "Zehnder ComfoConnect PRO Modbus",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect your Zehnder ventilation unit",
+        "description": "Enable Modbus TCP on the ComfoConnect PRO first. Select the connected ventilation model; the gateway cannot identify the exact Q-series model over this interface.",
+        "data": {"host": "Hostname or IP address", "port": "TCP port", "unit_id": "Modbus unit ID", "model": "Ventilation model"}
+      },
+      "reconfigure": {
+        "title": "Change the connection",
+        "description": "Update the connection to the same ventilation unit. Existing entities and automations are preserved.",
+        "data": {"host": "Hostname or IP address", "port": "TCP port", "unit_id": "Modbus unit ID", "model": "Ventilation model"}
+      }
+    },
+    "error": {
+      "cannot_connect": "Unable to read the gateway. Check its address, TCP port, unit ID and Modbus TCP mode. Another integration may be using conflicting connection settings.",
+      "wrong_device": "The gateway reports that the ventilation unit is not a compatible ComfoAir Q.",
+      "incompatible_version": "The gateway reports an incompatible ComfoAir Q firmware version. Check the device firmware.",
+      "no_ventilation_unit": "The gateway cannot detect a ventilation unit. Check the ComfoNet connection and commissioning.",
+      "unknown_connection_state": "The gateway returned an unknown connection status. Check its configuration and firmware.",
+      "invalid_input": "Enter a valid hostname or IP address, an integer TCP port (1–65535), unit ID (1–247) and supported model.",
+      "unknown": "Unexpected error while checking the gateway. See the Home Assistant log for details."
+    },
+    "abort": {
+      "already_configured": "This gateway endpoint and unit ID are already configured.",
+      "reconfigure_successful": "The connection was updated successfully."
+    }
+  },
+  "selector": {"model": {"options": {"comfoair_q600": "Zehnder ComfoAir Q600"}}},
+  "entity": {
+    "select": {
+      "ventilation_preset": {"name": "Ventilation preset", "state": {"away": "Away", "low": "Low", "medium": "Medium", "high": "High"}},
+      "temperature_profile": {"name": "Temperature profile", "state": {"normal": "Normal", "cold": "Cold", "warm": "Warm"}},
+      "temperature_profile_mode": {"name": "Temperature profile mode", "state": {"adaptive": "Adaptive", "fixed": "Fixed", "external_setpoint": "External setpoint"}}
+    },
+    "number": {
+      "external_setpoint": {"name": "External temperature setpoint"},
+      "boost_duration": {"name": "Boost duration"}
+    },
+    "switch": {
+      "auto_mode": {"name": "Auto mode"},
+      "boost": {"name": "Boost"},
+      "away": {"name": "Away function"},
+      "comfocool": {"name": "ComfoCool permission"}
+    },
+    "button": {"reset_errors": {"name": "Reset errors"}},
+    "binary_sensor": {
+      "error": {"name": "Error"},
+      "standby": {"name": "Standby"},
+      "filter_dirty": {"name": "Filter dirty"},
+      "comfohood": {"name": "ComfoHood"}
+    },
+    "sensor": {
+      "connection_state": {"name": "Connection state", "state": {"connected": "Connected", "wrong_device": "Wrong device", "incompatible_version": "Incompatible firmware", "no_ventilation_unit": "No ventilation unit"}},
+      "airflow": {"name": "Airflow"},
+      "filter_days_remaining": {"name": "Filter days remaining"},
+      "active_error": {"name": "Active error {slot}"},
+      "co2_zone": {"name": "CO₂ zone {zone}"},
+      "room_temperature": {"name": "Room temperature"},
+      "extract_temperature": {"name": "Extract temperature"},
+      "exhaust_temperature": {"name": "Exhaust temperature"},
+      "outdoor_temperature": {"name": "Outdoor temperature"},
+      "supply_temperature": {"name": "Supply temperature"},
+      "room_humidity": {"name": "Room humidity"},
+      "extract_humidity": {"name": "Extract humidity"},
+      "exhaust_humidity": {"name": "Exhaust humidity"},
+      "outdoor_humidity": {"name": "Outdoor humidity"},
+      "supply_humidity": {"name": "Supply humidity"}
+    }
+  },
+  "exceptions": {
+    "invalid_setting": {"message": "Unable to change setting: {reason}"},
+    "write_failed": {"message": "The gateway did not confirm the write. Check the device state before retrying the command."}
+  }
+}

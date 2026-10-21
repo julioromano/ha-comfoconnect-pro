@@ -1,0 +1,47 @@
+[project]
+name = "ha-comfoconnect-pro"
+version = "0.1.0"
+description = "Home Assistant integration for Zehnder ComfoConnect PRO Modbus TCP"
+requires-python = ">=3.14.2,<3.15"
+dependencies = []
+
+[dependency-groups]
+dev = [
+  "homeassistant==2026.10.2",
+  "modbus-connection[tmodbus]==4.12.4",
+  "pymodbus==3.13.1",
+  "tmodbus==0.6.2",
+  "pytest-homeassistant-custom-component",
+  "pytest-cov",
+  "ruff",
+  "basedpyright",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "RUF"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+addopts = "--cov=custom_components/comfoconnect_pro --cov-report=term-missing --cov-report=xml --cov-report=html --cov-fail-under=95"
+markers = ["integration: simulated TCP tests (excluded from the unit coverage gate)"]
+
+[tool.coverage.run]
+branch = true
+source = ["custom_components/comfoconnect_pro"]
+
+[tool.basedpyright]
+typeCheckingMode = "recommended"
+pythonVersion = "3.14"
+include = ["custom_components"]
+reportAny = false
+reportExplicitAny = false
+# HA creates entity attributes through its metaclass and registry lifecycle.
+reportUninitializedInstanceVariable = false

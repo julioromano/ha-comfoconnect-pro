@@ -1,0 +1,18 @@
+{
+  "entity": {
+    "select": {
+      "ventilation_preset": {"default": "mdi:fan"},
+      "temperature_profile": {"default": "mdi:thermometer"},
+      "temperature_profile_mode": {"default": "mdi:thermostat"}
+    },
+    "switch": {
+      "auto_mode": {"default": "mdi:fan-auto"},
+      "boost": {"default": "mdi:fan-plus"},
+      "away": {"default": "mdi:home-export-outline"},
+      "comfocool": {"default": "mdi:snowflake"}
+    },
+    "binary_sensor": {"standby": {"default": "mdi:pause-circle-outline"}, "comfohood": {"default": "mdi:stove"}},
+    "button": {"reset_errors": {"default": "mdi:alert-remove-outline"}},
+    "sensor": {"connection_state": {"default": "mdi:connection"}, "active_error": {"default": "mdi:alert-circle-outline"}}
+  }
+}

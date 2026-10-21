@@ -1,0 +1,13 @@
+{
+  "domain": "comfoconnect_pro",
+  "name": "Zehnder ComfoConnect PRO Modbus",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": ["modbus"],
+  "documentation": "https://zehnderamerica.com/resources/comfoconnect-pro-installer-manual/",
+  "integration_type": "device",
+  "iot_class": "local_polling",
+  "loggers": ["modbus_connection", "tmodbus"],
+  "requirements": [],
+  "version": "0.1.0"
+}
