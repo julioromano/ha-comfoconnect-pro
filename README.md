@@ -113,3 +113,7 @@ The [Daikin EKRHH integration](https://github.com/gerione/daikin-ha-ekrhh-modbus
 - [ ] Validate reset-errors on a suitable test condition and confirm it sends one trigger.
 
 Modbus RTU, cloud access, discovery and models other than Q600 are outside v0.1.0.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
