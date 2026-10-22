@@ -56,7 +56,7 @@ For a custom SSH port, add `-p PORT` to `ssh` and `-P PORT` to `scp`. If SCP rep
 
 ### HACS custom repository
 
-The repository includes HACS metadata. Once it is hosted on GitHub, add its GitHub URL under **HACS → Custom repositories**, choose **Integration**, download it, restart HA, then add the integration above. It has not been submitted to the HACS default directory.
+Under **HACS → Custom repositories**, add [`https://github.com/julioromano/ha-comfoconnect-pro`](https://github.com/julioromano/ha-comfoconnect-pro), choose **Integration**, download it, restart HA, then add the integration above. It has not been submitted to the HACS default directory.
 
 The integration bundles Zehnder icons and logos at standard and high resolution in its `brand` folder, following [Home Assistant's local branding convention](https://contributors.home-assistant.io/core/integrations/brands/). The unmodified images come from the [Home Assistant ComfoConnect brand assets](https://github.com/home-assistant/brands/tree/master/core_integrations/comfoconnect).
 
@@ -156,7 +156,9 @@ uv run pytest tests/integration --no-cov
 
 Unit tests use fake Modbus units while exercising HA's real setup, entity services and shared-connection ownership. The TCP test uses an independent local server and the actual tmodbus backend. It verifies unit IDs, function codes, addresses, socket sharing, reconnect and final-consumer cleanup.
 
-CI enforces 95% unit-test statement/branch coverage and uploads XML/HTML reports even when tests fail. TCP tests run separately without a coverage threshold. HA's hassfest validates integration metadata. The bundled protocol module has no HA imports and can be extracted into a separate library if additional consumers need it.
+CI enforces 95% unit-test statement/branch coverage and uploads XML/HTML reports even when tests fail. TCP tests run separately without a coverage threshold. HA's hassfest validates integration metadata. A separate HACS workflow validates the public repository on GitHub on pushes, pull requests and a weekly schedule, and can be run manually. The bundled protocol module has no HA imports and can be extracted into a separate library if additional consumers need it.
+
+Report bugs through [GitHub issues](https://github.com/julioromano/ha-comfoconnect-pro/issues) and propose changes through [pull requests](https://github.com/julioromano/ha-comfoconnect-pro/pulls). See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidance and [MAINTAINING.md](MAINTAINING.md) for the development and release workflow.
 
 The [Daikin EKRHH integration](https://github.com/gerione/daikin-ha-ekrhh-modbus) was a functional reference for UI setup and device-specific entities. This implementation uses the current HA shared Modbus APIs.
 

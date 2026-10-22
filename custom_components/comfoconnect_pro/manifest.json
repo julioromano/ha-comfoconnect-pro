@@ -1,12 +1,13 @@
 {
   "domain": "comfoconnect_pro",
   "name": "Zehnder ComfoConnect PRO Modbus",
-  "codeowners": [],
+  "codeowners": ["@julioromano"],
   "config_flow": true,
   "dependencies": ["modbus"],
-  "documentation": "https://zehnderamerica.com/resources/comfoconnect-pro-installer-manual/",
+  "documentation": "https://github.com/julioromano/ha-comfoconnect-pro",
   "integration_type": "device",
   "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/julioromano/ha-comfoconnect-pro/issues",
   "loggers": ["modbus_connection", "tmodbus"],
   "requirements": [],
   "version": "0.1.0"
