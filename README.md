@@ -87,7 +87,7 @@ The integration registers 40 entities on one Q600 device. Twelve accessory entit
 | Temperature profile / profile mode | Normal/Cold/Warm and Adaptive/Fixed/External setpoint selects |
 | External temperature setpoint | Number in °C, in 0.1 °C steps |
 | Auto mode, boost, away function | Separate command switches; resulting states are read from the unit |
-| Boost duration | Number in seconds |
+| Boost duration | Configured session length in seconds; remaining time while boost is active |
 | Reset errors | Button sending a single true command |
 | Airflow | Volume flow in m³/h |
 | Extract, exhaust, outdoor and supply temperatures/humidity | Measurement sensors |
@@ -105,7 +105,7 @@ Selecting a preset does not silently disable Auto mode. Change Auto explicitly w
 
 The HA external-setpoint control accepts **5–35 °C**, in **0.1 °C** steps. This is an **integration UI policy matching the previous YAML control**, not a manufacturer-defined device limit. The reviewed manuals supply no external-setpoint minimum or maximum. Fixed-profile defaults such as 18/20/24 °C and the unit's air/storage/installation temperature ranges are not setpoint bounds. The HA-independent protocol retains the unsigned-register encoding range of 0–6553.5 °C. Existing device readback outside the HA control range remains visible without clamping; HA commands outside 5–35 °C are rejected. Acknowledging a Modbus write does not guarantee the unit can achieve that comfort temperature.
 
-Boost duration accepts **0–65535 seconds**. The special value **65535 means 24 hours**, and the entity exposes `effective_duration_seconds: 86400` for that value. The number configures boost duration; it is not a remaining-time countdown. Set the duration before activating boost. Changing it while boost is active does not promise to restart or extend the current timer; that behavior requires PRO hardware validation.
+Boost duration accepts **0–65535 seconds**. The special value **65535 means 24 hours**, and the entity exposes `effective_duration_seconds: 86400` for that value. Set the configured session length before activating boost. Once boost is enabled, the device updates the same register with the **remaining time**, so the number also acts as a countdown, refreshed on each 15-second poll. The displayed value therefore reflects remaining time during boost rather than retaining the original session length. Changing it while boost is active does not promise to restart or extend the current timer; that behavior requires PRO hardware validation.
 
 ComfoCool permission allows the unit to decide whether cooling may run. It does not report compressor activity or force cooling to start. Scheduling, season, Away, fan state, bypass state, temperatures and faults can prevent cooling even when permission is enabled.
 
@@ -137,7 +137,7 @@ The five holding-register sensors are replaced by the states of their controls:
 | `sensor.comfoair_q_temperature_profile` | Select `temperature_profile` | `normal`, `cold`, `warm` |
 | `sensor.comfoair_q_temperature_profile_mode` | Select `temperature_profile_mode` | `adaptive`, `fixed`, `external_setpoint` |
 | `sensor.comfoair_q_external_setpoint` | Number `external_setpoint` | °C |
-| `sensor.comfoair_q_boost_time` | Number `boost_duration` | Seconds; `65535` means 24 hours |
+| `sensor.comfoair_q_boost_time` | Number `boost_duration` | Configured seconds, then remaining time while boost is active; `65535` means 24 hours |
 
 Update comparisons and selected options from title-case YAML strings (`Away`, `Low`, `Normal`, `External setpoint`) to lowercase keys (`away`, `low`, `normal`, `external_setpoint`). The frontend still displays translated labels. Replace numeric preset/profile comparisons with those keys. For connection state, replace `0` with `connected`, `30` with `wrong_device`, `40` with `incompatible_version`, and `50` with `no_ventilation_unit`; the numeric value remains in `raw_code`. Alarm sensors retain their numeric states and add symbolic code attributes. Account for mode-dependent control availability and use actual readback after commands.
 
@@ -169,7 +169,7 @@ The [Daikin EKRHH integration](https://github.com/gerione/daikin-ha-ekrhh-modbus
 - [ ] Check preset arbitration in Auto/Manual, scheduled changes and sensor/safety overrides; do not assume the display's temporary-override timing applies to Modbus.
 - [ ] Verify Away preset/switch coupling and resulting ComfoCool permission without additional client-side writes.
 - [ ] Check all temperature modes, unavailable controls, a normal comfort setpoint within the HA 5–35 °C range, and unchanged readback when another controller sets a value outside that range.
-- [ ] Test boost duration before activation, changes while active, early cancellation and the `65535` 24-hour value; record actual timer behavior.
+- [ ] Test boost duration before activation and remaining-time readback while active, changes while active, early cancellation and the `65535` 24-hour value; record actual timer behavior.
 - [ ] Enable only installed accessories and verify their values; confirm enabling/disabling changes polling and absent accessories leave core entities working.
 - [ ] Confirm ComfoCool permission is not mistaken for active cooling and compare indicative filter life with the unit's display.
 - [ ] Confirm a failed register group affects only its entities and values recover without reloading when reads succeed again.

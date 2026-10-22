@@ -132,6 +132,7 @@ class Settings(Component):
     external_setpoint = gauge(
         3, 0.1, signed=False, unit="°C", writable=_number(0, 6553.5, 0.1)
     )
+    # Configured session length; the device reports remaining time during boost.
     boost_duration = integer(4, signed=False, unit="s", writable=_number(0, 65535))
 
 

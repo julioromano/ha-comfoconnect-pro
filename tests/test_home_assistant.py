@@ -100,6 +100,39 @@ async def test_controls_write_and_refresh_cached_states(hass, configured, unit):
     assert [(w.address, w.values) for w in writes] == [(0, [True])]
 
 
+async def test_boost_duration_reports_configured_length_then_remaining_time(
+    hass, configured, unit
+):
+    duration_id = entity_id(hass, configured, "boost_duration", "number")
+    boost_id = entity_id(hass, configured, "boost", "switch")
+    writes = []
+    unit.on_write(writes.append)
+
+    await hass.services.async_call(
+        "number",
+        "set_value",
+        {"entity_id": duration_id, "value": 300},
+        blocking=True,
+    )
+    assert float(hass.states.get(duration_id).state) == 300
+    assert hass.states.get(boost_id).state == "off"
+
+    await hass.services.async_call(
+        "switch", "turn_on", {"entity_id": boost_id}, blocking=True
+    )
+    assert hass.states.get(boost_id).state == "on"
+    assert float(hass.states.get(duration_id).state) == 300
+
+    for remaining in (285, 270, 1, 0):
+        unit.holding[4] = remaining
+        await configured.runtime_data.async_refresh()
+        state = hass.states.get(duration_id)
+        assert float(state.state) == remaining
+        assert state.attributes["effective_duration_seconds"] == remaining
+
+    assert [(w.address, w.values) for w in writes] == [(4, [300]), (6, [True])]
+
+
 async def test_disconnected_unit_keeps_status_and_recovers(hass, configured, unit):
     unit.input[0] = 50
     await configured.runtime_data.async_refresh()
