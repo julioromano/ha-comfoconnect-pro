@@ -5,6 +5,7 @@ from unittest.mock import patch
 import pytest
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.setup import async_setup_component
 from modbus_connection.exceptions import ModbusTimeoutError
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -14,6 +15,41 @@ from custom_components.comfoconnect_pro.const import DOMAIN
 from .conftest import CONNECTION_DATA
 
 pytestmark = pytest.mark.usefixtures("enable_custom_integrations", "mock_connection")
+
+
+@pytest.mark.parametrize("step_id", ["user", "reconfigure"])
+async def test_gui_form_and_validation_errors_are_serializable(
+    hass, hass_client, entry, step_id
+):
+    """The GUI must receive JSON for both the initial form and a retry."""
+    assert await async_setup_component(hass, "config", {})
+    client = await hass_client()
+    request = {"handler": DOMAIN}
+    if step_id == "reconfigure":
+        request["entry_id"] = entry.entry_id
+    response = await client.post("/api/config/config_entries/flow", json=request)
+    assert response.status == 200
+    form = await response.json()
+    assert form["type"] == "form"
+    assert form["step_id"] == step_id
+    fields = {field["name"]: field for field in form["data_schema"]}
+    assert set(fields) == {"host", "port", "unit_id", "model"}
+    assert "text" in fields["host"]["selector"]
+    assert fields["port"]["default"] == 502
+    assert fields["unit_id"]["default"] == 1
+    assert fields["model"]["default"] == "comfoair_q600"
+    if step_id == "reconfigure":
+        for key, value in CONNECTION_DATA.items():
+            assert fields[key]["description"]["suggested_value"] == value
+
+    response = await client.post(
+        f"/api/config/config_entries/flow/{form['flow_id']}",
+        json={**CONNECTION_DATA, "host": "http://gateway.local"},
+    )
+    assert response.status == 200
+    form = await response.json()
+    assert form["errors"] == {"base": "invalid_input"}
+    assert len(form["data_schema"]) == 4
 
 
 async def test_form_and_read_only_validation(hass, unit, connection):
@@ -27,11 +63,14 @@ async def test_form_and_read_only_validation(hass, unit, connection):
         "custom_components.comfoconnect_pro.async_setup_entry", return_value=True
     ):
         result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {"host": " GATEWAY.local. "}
+            result["flow_id"],
+            {"host": " GATEWAY.local. ", "port": 502.0, "unit_id": 1.0},
         )
         await hass.async_block_till_done()
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == CONNECTION_DATA
+    assert type(result["data"]["port"]) is int
+    assert type(result["data"]["unit_id"]) is int
     assert writes == []
     assert [
         (event.register_type, event.address, event.count) for event in unit.read_events

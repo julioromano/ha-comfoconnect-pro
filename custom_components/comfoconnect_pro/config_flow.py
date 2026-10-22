@@ -59,18 +59,12 @@ def _integer(value: float) -> int:
 
 DATA_SCHEMA = probatio.Schema(
     {
-        probatio.Required(CONF_HOST): probatio.All(TextSelector(), normalize_host),
-        probatio.Required(CONF_PORT, default=DEFAULT_PORT): probatio.All(
-            NumberSelector(
-                NumberSelectorConfig(min=1, max=65535, mode=NumberSelectorMode.BOX)
-            ),
-            _integer,
+        probatio.Required(CONF_HOST): TextSelector(),
+        probatio.Required(CONF_PORT, default=DEFAULT_PORT): NumberSelector(
+            NumberSelectorConfig(min=1, max=65535, mode=NumberSelectorMode.BOX)
         ),
-        probatio.Required(CONF_UNIT_ID, default=DEFAULT_UNIT_ID): probatio.All(
-            NumberSelector(
-                NumberSelectorConfig(min=1, max=247, mode=NumberSelectorMode.BOX)
-            ),
-            _integer,
+        probatio.Required(CONF_UNIT_ID, default=DEFAULT_UNIT_ID): NumberSelector(
+            NumberSelectorConfig(min=1, max=247, mode=NumberSelectorMode.BOX)
         ),
         probatio.Required(CONF_MODEL, default=MODEL_Q600): SelectSelector(
             SelectSelectorConfig(
@@ -110,6 +104,11 @@ class ComfoConnectConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             try:
                 data: dict[str, Any] = DATA_SCHEMA(user_input)
+                # The form schema is serialized for the frontend. Keep custom
+                # validation here because Python callables cannot be rendered.
+                data[CONF_HOST] = normalize_host(data[CONF_HOST])
+                data[CONF_PORT] = _integer(data[CONF_PORT])
+                data[CONF_UNIT_ID] = _integer(data[CONF_UNIT_ID])
             except probatio.Invalid:
                 errors["base"] = "invalid_input"
             else:
