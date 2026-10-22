@@ -30,7 +30,7 @@ async def test_entities_metadata_and_optional_defaults(hass, configured):
     device = dr.async_get(hass).async_get(entries[0].device_id)
     assert device.manufacturer == "Zehnder"
     assert device.model == "ComfoAir Q600"
-    assert configured.runtime_data.update_interval.total_seconds() == 30
+    assert configured.runtime_data.update_interval.total_seconds() == 15
     for item in entries:
         key = item.unique_id.removeprefix(f"{configured.entry_id}_")
         optional = key.startswith("co2_zone_") or key in {

@@ -99,7 +99,7 @@ Humidity follows the manufacturer's unscaled percentage definition. Values outsi
 
 ## Updates, failures and diagnostics
 
-The integration polls every 30 seconds and reads back immediately after a write. Device code uses typed `modbus_connection.model` components. Home Assistant owns the shared TCP connection through `async_get_unit` and temporary setup probes through `async_get_temporary_unit`, following the [modern Modbus integration architecture](https://home-assistant-libs.github.io/modbus-connection/home-assistant/integration/). No YAML hub or separate socket is needed.
+The integration polls every 15 seconds and reads back immediately after a write. Device code uses typed `modbus_connection.model` components. Home Assistant owns the shared TCP connection through `async_get_unit` and temporary setup probes through `async_get_temporary_unit`, following the [modern Modbus integration architecture](https://home-assistant-libs.github.io/modbus-connection/home-assistant/integration/). No YAML hub or separate socket is needed.
 
 Core reads use separate contiguous blocks for alarms/airflow, duct temperatures, duct humidity, filter life, settings, operating coils, error/standby flags and filter status. A device-rejected block or isolated request timeout makes only that block's entities unavailable. Other successfully read groups remain usable, including connection status. Failed fields and their raw words are cleared for that cycle and retried on subsequent polls. An illegal address on an enabled accessory is recorded as unsupported, separately from transient failures, and is also retried.
 
