@@ -36,9 +36,19 @@ The unit manuals explain operating behavior; they do not expose additional Modbu
 
 ### Manual
 
-1. Copy `custom_components/comfoconnect_pro` into your HA configuration directory as `config/custom_components/comfoconnect_pro`.
-2. Restart Home Assistant.
+1. Enable SSH access to Home Assistant. From this repository's root, copy the entire integration directory, including translations:
+
+   ```sh
+   ssh USER@HA_HOST 'mkdir -p /config/custom_components'
+   scp -r custom_components/comfoconnect_pro USER@HA_HOST:/config/custom_components/
+   ```
+
+   Replace `USER` and `HA_HOST` with your HA SSH login and address. The resulting file must be `/config/custom_components/comfoconnect_pro/manifest.json`. For HA Container, replace `/config` with the host directory mounted as `/config`.
+2. Restart Home Assistant. With the HA OS Terminal & SSH app, you can run `ssh USER@HA_HOST 'ha core restart'`.
 3. Open **Settings → Devices & services → Add integration** and choose **Zehnder ComfoConnect PRO Modbus**.
+4. Enter the **gateway's** hostname/IP, TCP port (default `502`), unit ID (default `1`) and model **ComfoAir Q600**.
+
+For a custom SSH port, add `-p PORT` to `ssh` and `-P PORT` to `scp`. If SCP reports an unavailable SFTP subsystem, add `-O` to `scp`.
 
 ### HACS custom repository
 
