@@ -7,11 +7,15 @@ The caller owns the Modbus connection; this model consumes only a unit.
 import asyncio
 import math
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import cast, final
 
 from modbus_connection import ModbusUnit
-from modbus_connection.exceptions import IllegalDataAddressError
+from modbus_connection.exceptions import (
+    IllegalDataAddressError,
+    ModbusExceptionError,
+    ModbusTimeoutError,
+)
 from modbus_connection.model import Component, Raw, coil, discrete_input, gauge, integer
 
 type Value = int | float | bool | None
@@ -25,6 +29,11 @@ CONNECTION_STATES = {
     40: "incompatible_version",
     50: "no_ventilation_unit",
 }
+OPTIONAL_FIELDS = frozenset(
+    {"room_temperature", "room_humidity", "comfohood", "comfocool"}
+    | {f"co2_zone_{zone}" for zone in range(1, 9)}
+)
+_NO_OPTIONAL_FIELDS: frozenset[str] = frozenset()
 
 
 def _number(
@@ -66,25 +75,48 @@ class ConnectionStatus(Component):
 
 
 @final
-class Measurements(Component):
-    """Mandatory input registers, without crossing optional addresses."""
+class AlarmsAndAirflow(Component):
+    """One contiguous block, isolated from temperature and humidity reads."""
 
     register_space = "input"
-    max_gap = 0
+    register_ranges = ((1, 6),)
     active_error_1 = integer(1, signed=False)
     active_error_2 = integer(2, signed=False)
     active_error_3 = integer(3, signed=False)
     active_error_4 = integer(4, signed=False)
     active_error_5 = integer(5, signed=False)
     airflow = integer(6, signed=False, unit="m³/h")
+
+
+@final
+class Temperatures(Component):
+    """Mandatory signed duct temperatures."""
+
+    register_space = "input"
+    register_ranges = ((8, 11),)
     extract_temperature = gauge(8, 0.1, unit="°C")
     exhaust_temperature = gauge(9, 0.1, unit="°C")
     outdoor_temperature = gauge(10, 0.1, unit="°C")
     supply_temperature = gauge(11, 0.1, unit="°C")
+
+
+@final
+class Humidity(Component):
+    """Mandatory unscaled duct humidity percentages."""
+
+    register_space = "input"
+    register_ranges = ((13, 16),)
     extract_humidity = integer(13, signed=False, unit="%")
     exhaust_humidity = integer(14, signed=False, unit="%")
     outdoor_humidity = integer(15, signed=False, unit="%")
     supply_humidity = integer(16, signed=False, unit="%")
+
+
+@final
+class FilterLife(Component):
+    """Indicative filter lifetime, separate from optional CO₂ registers."""
+
+    register_space = "input"
     filter_days_remaining = integer(25, signed=False, unit="d")
 
 
@@ -92,6 +124,7 @@ class Measurements(Component):
 class Settings(Component):
     """Writable holding registers; no side effects on other settings."""
 
+    register_ranges = ((0, 4),)
     ventilation_preset = integer(0, signed=False, writable=_number(0, 3))
     temperature_profile = integer(1, signed=False, writable=_number(0, 2))
     temperature_profile_mode = integer(2, signed=False, writable=_number(0, 2))
@@ -106,6 +139,7 @@ class Settings(Component):
 class OperatingState(Component):
     """Ordinary read/write coils."""
 
+    coil_ranges = ((5, 7),)
     auto_mode = coil(5, writable=_boolean)
     boost = coil(6, writable=_boolean)
     away = coil(7, writable=_boolean)
@@ -124,11 +158,17 @@ class Commands(Component):
 
 @final
 class StatusFlags(Component):
-    """Mandatory read-only discrete inputs."""
+    """Contiguous error and standby flags."""
 
-    max_gap = 0
+    discrete_ranges = ((0, 1),)
     error = discrete_input(0)
     standby = discrete_input(1)
+
+
+@final
+class FilterStatus(Component):
+    """Read filter status without including the optional hood address."""
+
     filter_dirty = discrete_input(3)
 
 
@@ -171,12 +211,22 @@ class ComfoCool(Component):
 
 
 @dataclass(frozen=True)
+class ReadFailure:
+    """Stable diagnostic details without exception messages or endpoint data."""
+
+    error_type: str
+    exception_code: int | None = None
+
+
+@dataclass(frozen=True)
 class Snapshot:
-    """One successful poll; values are never reused after a failed optional read."""
+    """One poll; failed or skipped reads never reuse previous values."""
 
     values: dict[str, Value]
     raw: Raw
     unsupported: tuple[str, ...] = ()
+    failed_fields: dict[str, ReadFailure] = field(default_factory=dict)
+    polled_optional_fields: tuple[str, ...] = ()
 
 
 @final
@@ -191,10 +241,14 @@ class ComfoAirQ600:
         self.commands = Commands(unit)
         self.cool = ComfoCool(unit)
         self._core = (
-            Measurements(unit),
+            AlarmsAndAirflow(unit),
+            Temperatures(unit),
+            Humidity(unit),
+            FilterLife(unit),
             self.settings,
             self.operating,
             StatusFlags(unit),
+            FilterStatus(unit),
         )
         self._optional: list[tuple[Component, dict[str, str]]] = [
             (RoomTemperature(unit), {"room_temperature": "room_temperature"}),
@@ -217,8 +271,10 @@ class ComfoAirQ600:
         await self.status.async_update()
         return cast(int, self.status.connection_state)
 
-    async def async_update(self) -> Snapshot:
-        """Poll core and optional fields without masking transport failures."""
+    async def async_update(
+        self, optional_fields: frozenset[str] = _NO_OPTIONAL_FIELDS
+    ) -> Snapshot:
+        """Isolate rejected blocks and poll only explicitly requested accessories."""
         async with self._lock:
             raw = await self.status.async_read_raw()
             values: dict[str, Value] = {
@@ -227,8 +283,32 @@ class ComfoAirQ600:
             if self.status.connection_state != 0:
                 return Snapshot(values, raw)
 
-            async def read(component: Component, names: dict[str, str]) -> None:
-                for space, registers in (await component.async_read_raw()).items():
+            unsupported: list[str] = []
+            failures: dict[str, ReadFailure] = {}
+            polled: set[str] = set()
+            timed_out = False
+
+            async def read(
+                component: Component, names: dict[str, str], *, optional: bool = False
+            ) -> None:
+                nonlocal timed_out
+                try:
+                    component_raw = await component.async_read_raw()
+                except (ModbusExceptionError, ModbusTimeoutError) as err:
+                    timed_out |= isinstance(err, ModbusTimeoutError)
+                    for key in names.values():
+                        values[key] = None
+                        if optional and isinstance(err, IllegalDataAddressError):
+                            unsupported.append(key)
+                        else:
+                            failures[key] = ReadFailure(
+                                type(err).__name__,
+                                err.exception_code
+                                if isinstance(err, ModbusExceptionError)
+                                else None,
+                            )
+                    return
+                for space, registers in component_raw.items():
                     raw.setdefault(space, {}).update(registers)
                 for field, key in names.items():
                     value = cast(Value, getattr(component, field))
@@ -246,15 +326,28 @@ class ComfoAirQ600:
                 await read(
                     component, {name: name for name in component.declared_fields}
                 )
-            unsupported: list[str] = []
             for component, names in self._optional:
-                try:
-                    await read(component, names)
-                except IllegalDataAddressError:
-                    for key in names.values():
-                        values[key] = None
-                        unsupported.append(key)
-            return Snapshot(values, raw, tuple(unsupported))
+                if optional_fields.intersection(names.values()):
+                    polled.update(names.values())
+                    await read(component, names, optional=True)
+            if timed_out:
+                # Do not keep the initial "connected" value if the link or
+                # ventilation unit disappeared during the remaining requests.
+                status_raw = await self.status.async_read_raw()
+                if self.status.connection_state != 0:
+                    return Snapshot(
+                        {"connection_state": self.status.connection_state},
+                        status_raw,
+                        polled_optional_fields=tuple(sorted(polled)),
+                    )
+                raw["input"].update(status_raw["input"])
+            return Snapshot(
+                values,
+                raw,
+                unsupported=tuple(unsupported),
+                failed_fields=failures,
+                polled_optional_fields=tuple(sorted(polled)),
+            )
 
     async def async_write(self, key: str, value: Value) -> None:
         """Validate and write exactly one setting or trigger."""

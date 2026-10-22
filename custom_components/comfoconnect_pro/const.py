@@ -11,6 +11,9 @@ CONF_UNIT_ID = "unit_id"
 DEFAULT_PORT = 502
 DEFAULT_UNIT_ID = 1
 SCAN_INTERVAL_SECONDS = 30
+# HA control policy, not manufacturer-specified device limits.
+EXTERNAL_SETPOINT_MIN = 5
+EXTERNAL_SETPOINT_MAX = 35
 PLATFORMS = (
     Platform.SENSOR,
     Platform.BINARY_SENSOR,

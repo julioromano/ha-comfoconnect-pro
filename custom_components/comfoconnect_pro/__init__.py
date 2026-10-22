@@ -29,6 +29,9 @@ async def async_setup_entry(
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    # The first refresh has no entity contexts. Hydrate any accessories the
+    # entity registry restores as enabled now that platform listeners exist.
+    await coordinator.async_refresh()
     return True
 
 

@@ -1,4 +1,4 @@
-"""Numeric settings using the manufacturer's documented wire ranges."""
+"""Numeric settings with documented units and HA control limits."""
 
 from typing import cast, final, override
 
@@ -12,6 +12,7 @@ from homeassistant.const import UnitOfTemperature, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .const import EXTERNAL_SETPOINT_MAX, EXTERNAL_SETPOINT_MIN
 from .coordinator import ComfoConnectConfigEntry
 from .entity import ComfoConnectEntity
 
@@ -21,8 +22,8 @@ NUMBERS = (
         translation_key="external_setpoint",
         device_class=NumberDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-        native_min_value=0,
-        native_max_value=6553.5,
+        native_min_value=EXTERNAL_SETPOINT_MIN,
+        native_max_value=EXTERNAL_SETPOINT_MAX,
         native_step=0.1,
         mode=NumberMode.BOX,
     ),

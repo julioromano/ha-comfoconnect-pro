@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 import pytest
 from homeassistant.components.modbus import async_get_temporary_unit
 from homeassistant.const import CONF_HOST, CONF_MODEL, CONF_PORT
+from homeassistant.helpers import entity_registry as er
 from modbus_connection import ModbusTcpParams
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -123,6 +124,12 @@ async def test_tcp_setup_commands_sharing_and_reconnect(
             assert first.runtime_data.data.values["outdoor_temperature"] == -5.5
             assert first.runtime_data.data.values["filter_dirty"] is True
             assert gateway.requests[0] == (7, 4, 0, 1)
+            assert (7, 4, 1, 6) in gateway.requests
+            assert (7, 4, 8, 4) in gateway.requests
+            assert not any(
+                fc == 4 and address in {7, 12, *range(17, 25)}
+                for _, fc, address, _ in gateway.requests
+            )
             second.add_to_hass(hass)
             assert await hass.config_entries.async_setup(second.entry_id)
             assert gateway.connection_count == 1
@@ -136,12 +143,49 @@ async def test_tcp_setup_commands_sharing_and_reconnect(
             assert (7, 6, 0, 3) in gateway.requests
             assert gateway.requests.count((7, 5, 0, 0xFF00)) == 1
             assert gateway.holdings[0] == 3
+            registry = er.async_get(hass)
+            co2_id = registry.async_get_entity_id(
+                "sensor", DOMAIN, f"{first.entry_id}_co2_zone_1"
+            )
+            registry.async_update_entity(co2_id, disabled_by=None)
+            await hass.async_block_till_done()
+            assert await hass.config_entries.async_reload(first.entry_id)
+            assert first.runtime_data.data.polled_optional_fields == ("co2_zone_1",)
+            assert (7, 4, 17, 1) in gateway.requests
+            assert not any(
+                fc == 4 and address == 18 for _, fc, address, _ in gateway.requests
+            )
             gateway.reject.add((4, 17))
             await first.runtime_data.async_refresh()
             assert first.runtime_data.data.unsupported == ("co2_zone_1",)
             assert first.runtime_data.data.values["airflow"] == 350
-            await gateway.disconnect()
-            await hass.async_block_till_done()
+            gateway.reject.add((4, 8))
+            await first.runtime_data.async_refresh()
+            assert first.runtime_data.last_update_success
+            assert first.runtime_data.data.values["outdoor_temperature"] is None
+            assert first.runtime_data.data.values["airflow"] == 350
+            assert first.runtime_data.data.values["connection_state"] == 0
+            assert (
+                first.runtime_data.data.failed_fields[
+                    "outdoor_temperature"
+                ].exception_code
+                == 2
+            )
+            gateway.reject.remove((4, 8))
+            await first.runtime_data.async_refresh()
+            assert first.runtime_data.data.values["outdoor_temperature"] == -5.5
+            async with async_get_temporary_unit(
+                hass, ModbusTcpParams(host="127.0.0.1", port=port), 7
+            ) as unit:
+                # Server-side close does not mean the client has received EOF.
+                # Wait for the real backend notification before testing recovery.
+                lost = asyncio.Event()
+                unsubscribe = unit.on_connection_lost(lost.set)
+                try:
+                    await gateway.disconnect()
+                    await asyncio.wait_for(lost.wait(), 2)
+                finally:
+                    unsubscribe()
             await second.runtime_data.async_refresh()
             assert second.runtime_data.last_update_success
             assert gateway.connection_count == 2

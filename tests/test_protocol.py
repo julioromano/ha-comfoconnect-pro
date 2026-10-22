@@ -4,12 +4,12 @@ import pytest
 from modbus_connection.exceptions import IllegalDataAddressError, ModbusTimeoutError
 from modbus_connection.mock import MockModbusUnit
 
-from custom_components.comfoconnect_pro.protocol import ComfoAirQ600
+from custom_components.comfoconnect_pro.protocol import OPTIONAL_FIELDS, ComfoAirQ600
 
 
 async def test_decodes_register_spaces_and_signed_temperature(unit: MockModbusUnit):
     device = ComfoAirQ600(unit)
-    data = await device.async_update()
+    data = await device.async_update(OPTIONAL_FIELDS)
     assert data.values["connection_state"] == 0
     assert data.values["airflow"] == 350
     assert data.values["outdoor_temperature"] == -5.5
@@ -24,7 +24,7 @@ async def test_decodes_register_spaces_and_signed_temperature(unit: MockModbusUn
 
 async def test_optional_register_rejection_does_not_disable_core(unit: MockModbusUnit):
     unit.fail_read(17, IllegalDataAddressError(), register_type="input")
-    data = await ComfoAirQ600(unit).async_update()
+    data = await ComfoAirQ600(unit).async_update(OPTIONAL_FIELDS)
     assert data.values["co2_zone_1"] is None
     assert data.values["co2_zone_2"] == 601
     assert data.values["airflow"] == 350
@@ -33,8 +33,10 @@ async def test_optional_register_rejection_does_not_disable_core(unit: MockModbu
 
 async def test_timeout_is_not_treated_as_optional_absence(unit: MockModbusUnit):
     unit.fail_read(17, ModbusTimeoutError(), register_type="input")
-    with pytest.raises(ModbusTimeoutError):
-        await ComfoAirQ600(unit).async_update()
+    data = await ComfoAirQ600(unit).async_update(OPTIONAL_FIELDS)
+    assert "co2_zone_1" not in data.unsupported
+    assert "co2_zone_1" in data.failed_fields
+    assert data.values["airflow"] == 350
 
 
 async def test_preset_writes_only_the_requested_register(unit: MockModbusUnit):
@@ -81,7 +83,7 @@ async def test_temperature_dependencies_are_checked_without_changing_mode(
 
 
 async def test_every_measurement_and_status_field(unit):
-    data = await ComfoAirQ600(unit).async_update()
+    data = await ComfoAirQ600(unit).async_update(OPTIONAL_FIELDS)
     assert data.values == {
         "connection_state": 0,
         **{
@@ -184,10 +186,14 @@ async def test_disconnected_unit_reads_status_only_and_rejects_writes(unit, stat
 
 async def test_optional_values_are_cleared_and_can_recover(unit):
     device = ComfoAirQ600(unit)
-    assert (await device.async_update()).values["room_temperature"] == 21.5
+    assert (await device.async_update(OPTIONAL_FIELDS)).values[
+        "room_temperature"
+    ] == 21.5
     unit.fail_read(7, IllegalDataAddressError(), register_type="input")
-    data = await device.async_update()
+    data = await device.async_update(OPTIONAL_FIELDS)
     assert data.values["room_temperature"] is None
     assert 7 not in data.raw["input"]
     unit.fail_read(7, None, register_type="input")
-    assert (await device.async_update()).values["room_temperature"] == 21.5
+    assert (await device.async_update(OPTIONAL_FIELDS)).values[
+        "room_temperature"
+    ] == 21.5

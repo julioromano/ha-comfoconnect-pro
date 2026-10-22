@@ -1,6 +1,7 @@
 """Poll the model and adapt protocol errors to Home Assistant."""
 
 import logging
+import math
 from datetime import timedelta
 from typing import final, override
 
@@ -11,8 +12,14 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from modbus_connection import ModbusError, ModbusUnit
 
-from .const import DOMAIN, MODEL_NAME, SCAN_INTERVAL_SECONDS
-from .protocol import ComfoAirQ600, Snapshot, Value
+from .const import (
+    DOMAIN,
+    EXTERNAL_SETPOINT_MAX,
+    EXTERNAL_SETPOINT_MIN,
+    MODEL_NAME,
+    SCAN_INTERVAL_SECONDS,
+)
+from .protocol import OPTIONAL_FIELDS, ComfoAirQ600, Snapshot, Value
 
 _LOGGER = logging.getLogger(__name__)
 type ComfoConnectConfigEntry = ConfigEntry[ComfoConnectCoordinator]
@@ -44,13 +51,22 @@ class ComfoConnectCoordinator(DataUpdateCoordinator[Snapshot]):
     @override
     async def _async_update_data(self) -> Snapshot:
         try:
-            return await self.device.async_update()
+            optional_fields = frozenset(self.async_contexts()) & OPTIONAL_FIELDS
+            return await self.device.async_update(optional_fields)
         except ModbusError as err:
             raise UpdateFailed("Unable to read ComfoConnect PRO") from err
 
     async def async_write(self, key: str, value: Value) -> None:
         """Write, then read device state instead of assuming the command applied."""
         try:
+            if key == "external_setpoint" and (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+                or not EXTERNAL_SETPOINT_MIN <= value <= EXTERNAL_SETPOINT_MAX
+            ):
+                limits = f"{EXTERNAL_SETPOINT_MIN}-{EXTERNAL_SETPOINT_MAX} °C"
+                raise ValueError(f"External setpoint must be within {limits}")
             await self.device.async_write(key, value)
         except ValueError as err:
             raise ServiceValidationError(

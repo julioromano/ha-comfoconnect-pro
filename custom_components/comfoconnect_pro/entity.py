@@ -21,7 +21,7 @@ class ComfoConnectEntity[DescriptionT: EntityDescription](
     def __init__(
         self, coordinator: ComfoConnectCoordinator, description: DescriptionT
     ) -> None:
-        super().__init__(coordinator)
+        super().__init__(coordinator, context=description.key)
         # Each platform fixes DescriptionT to its own HA description type.
         self.entity_description: DescriptionT = description  # pyright: ignore[reportIncompatibleVariableOverride]
         assert coordinator.config_entry is not None
@@ -40,11 +40,18 @@ class ComfoConnectEntity[DescriptionT: EntityDescription](
     @callback
     def _update_state(self) -> None:
         """Update HA's cache-invalidating attributes from one snapshot."""
+        key = self.entity_description.key
+        data = self.coordinator.data
+        mode = data.values.get("temperature_profile_mode")
         self._attr_available: bool = self.coordinator.last_update_success and (
-            self.entity_description.key == "connection_state"
+            key == "connection_state"
             or (
-                self.coordinator.data.values.get("connection_state") == 0
-                and self.entity_description.key not in self.coordinator.data.unsupported
+                data.values.get("connection_state") == 0
+                and (key == "reset_errors" or key in data.values)
+                and key not in data.unsupported
+                and key not in data.failed_fields
+                and (key != "temperature_profile" or mode in (0, 1))
+                and (key != "external_setpoint" or mode == 2)
             )
         )
 
