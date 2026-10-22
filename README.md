@@ -1,6 +1,10 @@
 # Zehnder ComfoConnect PRO Modbus
 
+<img src="custom_components/comfoconnect_pro/brand/logo.png" alt="Zehnder" width="206">
+
 A Home Assistant custom integration for a **Zehnder ComfoAir Q600** connected to a **ComfoConnect PRO in Modbus TCP mode**. Requires **Home Assistant 2026.10.2 or newer**.
+
+**Unofficial, independent project.** This repository and its code are not affiliated with, developed by, sponsored by, endorsed by, or supported by Zehnder Group or any of its subsidiaries. Zehnder, ComfoAir and ComfoConnect names, trademarks and logos belong to their respective owners and are used solely to identify compatible equipment.
 
 **Experimental: tested against simulated Modbus devices, not yet validated on physical Q600/PRO hardware.** The hardware acceptance checklist below tracks that remaining validation.
 
@@ -36,7 +40,7 @@ The unit manuals explain operating behavior; they do not expose additional Modbu
 
 ### Manual
 
-1. Enable SSH access to Home Assistant. From this repository's root, copy the entire integration directory, including translations:
+1. Enable SSH access to Home Assistant. From this repository's root, copy the entire integration directory, including translations and the `brand` folder:
 
    ```sh
    ssh USER@HA_HOST 'mkdir -p /config/custom_components'
@@ -53,6 +57,8 @@ For a custom SSH port, add `-p PORT` to `ssh` and `-P PORT` to `scp`. If SCP rep
 ### HACS custom repository
 
 The repository includes HACS metadata. Once it is hosted on GitHub, add its GitHub URL under **HACS → Custom repositories**, choose **Integration**, download it, restart HA, then add the integration above. It has not been submitted to the HACS default directory.
+
+The integration bundles Zehnder icons and logos at standard and high resolution in its `brand` folder, following [Home Assistant's local branding convention](https://contributors.home-assistant.io/core/integrations/brands/). The unmodified images come from the [Home Assistant ComfoConnect brand assets](https://github.com/home-assistant/brands/tree/master/core_integrations/comfoconnect).
 
 ## Gateway preparation and configuration
 
