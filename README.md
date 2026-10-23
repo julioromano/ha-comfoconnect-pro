@@ -2,11 +2,11 @@
 
 <img src="custom_components/comfoconnect_pro/brand/logo.png" alt="Zehnder" width="206">
 
-A Home Assistant custom integration for a **Zehnder ComfoAir Q 600** connected to a **ComfoConnect PRO in Modbus TCP mode**. Requires **Home Assistant 2026.10.2 or newer**.
+A Home Assistant custom integration for a **Zehnder ComfoAir Q600** connected to a **ComfoConnect PRO in Modbus TCP mode**. Requires **Home Assistant 2026.10.2 or newer**.
 
 **Unofficial, independent project.** This repository and its code are not affiliated with, developed by, sponsored by, endorsed by, or supported by Zehnder Group or any of its subsidiaries. Zehnder, ComfoAir and ComfoConnect names, trademarks and logos belong to their respective owners and are used solely to identify compatible equipment.
 
-Tested and working on a physical ComfoAir Q 600 with a ComfoConnect PRO gateway. **The ComfoAir Q 600 is at the moment the only supported device.**
+Tested and working on a physical ComfoAir Q600 with a ComfoConnect PRO gateway. **The ComfoAir Q600 is at the moment the only supported device.**
 
 ## Authoritative register documentation
 
@@ -164,7 +164,7 @@ The [Daikin EKRHH integration](https://github.com/gerione/daikin-ha-ekrhh-modbus
 
 ## Hardware regression checklist
 
-Use these checks when changing protocol behavior or testing new firmware on the supported ComfoAir Q 600 and ComfoConnect PRO gateway.
+Use these checks when changing protocol behavior or testing new firmware on the supported ComfoAir Q600 and ComfoConnect PRO gateway.
 
 - [ ] Record Q600 and PRO firmware versions; confirm Modbus TCP mode and the configured unit ID.
 - [ ] Add the integration and compare airflow, temperatures, humidity, filter life and alarms with Zehnder's display/app.
