@@ -29,7 +29,7 @@ These official download URLs were used for the documentation review on **2026-10
 | ComfoAir Q installer manual | `ZGNL_Manual_40015975`, V0118, English; 20 pages | [Zehnder support PDF](https://zehnder-systems-si.zendesk.com/hc/en-us/article_attachments/4417585038993) |
 | ComfoAir Q service manual | `Manual_10001004868`, V0218, English UK; 44 pages | [Zehnder support PDF](https://zehnder-systems-si.zendesk.com/hc/en-us/article_attachments/4417564641297) |
 | Q600 technical specification | `ComfoAirQ600_Technical_Specification_2018_V3`; 16 pages | [Zehnder Estonia PDF](https://www.zehnder.ee/wp-content/uploads/2024/05/ComfoAir-Q600.pdf) |
-| Q600 product datasheet | *ComfoAir Q 600 2024*, PDF created 2024-07-22; 8 pages | [Zehnder Lithuania PDF](https://zehnder.lt/wp-content/uploads/2024/10/Zehnder_CSY_ComfoAir-Q-600_ST_DAS_UK-en.pdf) |
+| Q600 product datasheet | *ComfoAir Q600 2024*, PDF created 2024-07-22; 8 pages | [Zehnder Lithuania PDF](https://zehnder.lt/wp-content/uploads/2024/10/Zehnder_CSY_ComfoAir-Q-600_ST_DAS_UK-en.pdf) |
 | ComfoConnect PRO installer manual | REV00-09-2024; 30 pages | [Zehnder Latvia PDF](https://zehnder.lv/wp-content/uploads/2024/12/ComfoConnect-PRO-Installer-manual.pdf) |
 
 The newer **REV00-08-2025** PRO manual linked above remains the authoritative register reference. Both PRO editions embed **Modbus document revision 137**. Upload-path dates do not establish document revisions. Downloaded PDFs and source records are kept locally under the ignored `.cache/reference-docs/zehnder/` directory and are not distributed with the integration.
