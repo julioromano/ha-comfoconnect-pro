@@ -23,10 +23,10 @@ Use GitHub as `origin`. Create feature branches from the latest `origin/main`, p
    git push origin refs/tags/v0.1.0:refs/tags/v0.1.0
    ```
 
-4. Create a GitHub Release from the existing tag, documenting changes, the minimum Home Assistant version and known limitations. Retain the experimental status and pending hardware-validation notice until supported by physical Q600/PRO results. Tags and released versions are immutable; ship corrections as a new patch version.
+4. Create a GitHub Release from the existing tag, documenting changes, the minimum Home Assistant version, supported device and known limitations. The ComfoAir Q 600 is at the moment the only supported device and has been tested with a physical ComfoConnect PRO gateway. Tags and released versions are immutable; ship corrections as a new patch version.
 5. Verify installation or upgrade through HACS using the released version. Use the standard repository layout; no custom ZIP asset or `zip_release` setting is needed.
 
-HACS uses [GitHub Releases for release-based versioning](https://hacs.xyz/docs/publish/start/#versions); pushing a tag alone does not publish a release. Distribute through HACS custom repositories initially. Consider default-directory submission after hardware validation and experience maintaining public releases.
+HACS uses [GitHub Releases for release-based versioning](https://hacs.xyz/docs/publish/start/#versions); pushing a tag alone does not publish a release. Distribute through HACS custom repositories initially. Consider default-directory submission after gaining experience maintaining public releases.
 
 ## Ongoing maintenance
 
