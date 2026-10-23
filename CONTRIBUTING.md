@@ -2,7 +2,7 @@
 
 Use [GitHub issues](https://github.com/julioromano/ha-comfoconnect-pro/issues) for bug reports and feature requests, and open pull requests against GitHub `main`.
 
-For bug reports, include the Home Assistant version, integration version, Q600 and PRO firmware versions, steps to reproduce and expected versus observed behavior. Attach integration diagnostics when useful, after reviewing them for private information. The integration is experimental; physical hardware results are especially useful for the [hardware acceptance checklist](README.md#hardware-acceptance-checklist).
+For bug reports, include the Home Assistant version, integration version, Q600 and PRO firmware versions, steps to reproduce and expected versus observed behavior. Attach integration diagnostics when useful, after reviewing them for private information. For protocol or firmware changes, include results from the [hardware regression checklist](README.md#hardware-regression-checklist).
 
 Keep changes focused, update documentation for user-visible changes and add regression tests for behavior changes. Run the checks in [Development](README.md#development) before requesting review. Changes must pass linting, typing, unit tests with at least 95% statement/branch coverage, simulated TCP tests, hassfest and HACS validation.
 

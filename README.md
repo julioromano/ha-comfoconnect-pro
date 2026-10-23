@@ -6,7 +6,7 @@ A Home Assistant custom integration for a **Zehnder ComfoAir Q600** connected to
 
 **Unofficial, independent project.** This repository and its code are not affiliated with, developed by, sponsored by, endorsed by, or supported by Zehnder Group or any of its subsidiaries. Zehnder, ComfoAir and ComfoConnect names, trademarks and logos belong to their respective owners and are used solely to identify compatible equipment.
 
-**Experimental: tested against simulated Modbus devices, not yet validated on physical Q600/PRO hardware.** The hardware acceptance checklist below tracks that remaining validation.
+Tested and working on a physical ComfoAir Q600 with a ComfoConnect PRO gateway. **The ComfoAir Q600 is at the moment the only supported device.**
 
 ## Authoritative register documentation
 
@@ -29,7 +29,7 @@ These official download URLs were used for the documentation review on **2026-10
 | ComfoAir Q installer manual | `ZGNL_Manual_40015975`, V0118, English; 20 pages | [Zehnder support PDF](https://zehnder-systems-si.zendesk.com/hc/en-us/article_attachments/4417585038993) |
 | ComfoAir Q service manual | `Manual_10001004868`, V0218, English UK; 44 pages | [Zehnder support PDF](https://zehnder-systems-si.zendesk.com/hc/en-us/article_attachments/4417564641297) |
 | Q600 technical specification | `ComfoAirQ600_Technical_Specification_2018_V3`; 16 pages | [Zehnder Estonia PDF](https://www.zehnder.ee/wp-content/uploads/2024/05/ComfoAir-Q600.pdf) |
-| Q600 product datasheet | *ComfoAir Q 600 2024*, PDF created 2024-07-22; 8 pages | [Zehnder Lithuania PDF](https://zehnder.lt/wp-content/uploads/2024/10/Zehnder_CSY_ComfoAir-Q-600_ST_DAS_UK-en.pdf) |
+| Q600 product datasheet | *ComfoAir Q600 2024*, PDF created 2024-07-22; 8 pages | [Zehnder Lithuania PDF](https://zehnder.lt/wp-content/uploads/2024/10/Zehnder_CSY_ComfoAir-Q-600_ST_DAS_UK-en.pdf) |
 | ComfoConnect PRO installer manual | REV00-09-2024; 30 pages | [Zehnder Latvia PDF](https://zehnder.lv/wp-content/uploads/2024/12/ComfoConnect-PRO-Installer-manual.pdf) |
 
 The newer **REV00-08-2025** PRO manual linked above remains the authoritative register reference. Both PRO editions embed **Modbus document revision 137**. Upload-path dates do not establish document revisions. Downloaded PDFs and source records are kept locally under the ignored `.cache/reference-docs/zehnder/` directory and are not distributed with the integration.
@@ -99,13 +99,13 @@ The integration registers 40 entities on one Q600 device. Twelve accessory entit
 
 Preset airflows are configured during commissioning: Low, Medium and High do not imply fixed percentages or specific m³/h values. Schedules, demand controls and safety controls may override the requested airflow. The integration displays actual readback and does not repeatedly reapply commands to counter those controls. The temporary-override timing described for the unit's display is not a guarantee for Modbus commands.
 
-Away selects minimum ventilation. The Away preset and Away-function switch expose separate documented commands whose effects can be related by the device. The integration sends only the requested command and reads back the resulting settings; exact PRO coupling remains part of hardware validation. Standby is read-only, so this integration does not expose fan on/off actions.
+Away selects minimum ventilation. The Away preset and Away-function switch expose separate documented commands whose effects can be related by the device. The integration sends only the requested command and reads back the resulting settings. Standby is read-only, so this integration does not expose fan on/off actions.
 
 Selecting a preset does not silently disable Auto mode. Change Auto explicitly when needed, because it affects scheduling and sensor controls. The temperature-profile control is unavailable outside Adaptive or Fixed mode; the external-setpoint control is unavailable outside External setpoint mode. Unknown or unreadable modes make both dependent controls unavailable. Choose the mode explicitly before changing those values; each write validates the current device mode again.
 
 The HA external-setpoint control accepts **5–35 °C**, in **0.1 °C** steps. This is an **integration UI policy matching the previous YAML control**, not a manufacturer-defined device limit. The reviewed manuals supply no external-setpoint minimum or maximum. Fixed-profile defaults such as 18/20/24 °C and the unit's air/storage/installation temperature ranges are not setpoint bounds. The HA-independent protocol retains the unsigned-register encoding range of 0–6553.5 °C. Existing device readback outside the HA control range remains visible without clamping; HA commands outside 5–35 °C are rejected. Acknowledging a Modbus write does not guarantee the unit can achieve that comfort temperature.
 
-Boost duration accepts **0–65535 seconds**. The special value **65535 means 24 hours**, and the entity exposes `effective_duration_seconds: 86400` for that value. Set the configured session length before activating boost. Once boost is enabled, the device updates the same register with the **remaining time**, so the number also acts as a countdown, refreshed on each 15-second poll. The displayed value therefore reflects remaining time during boost rather than retaining the original session length. Changing it while boost is active does not promise to restart or extend the current timer; that behavior requires PRO hardware validation.
+Boost duration accepts **0–65535 seconds**. The special value **65535 means 24 hours**, and the entity exposes `effective_duration_seconds: 86400` for that value. Set the configured session length before activating boost. Once boost is enabled, the device updates the same register with the **remaining time**, so the number also acts as a countdown, refreshed on each 15-second poll. The displayed value therefore reflects remaining time during boost rather than retaining the original session length. Changing it while boost is active does not guarantee that the current timer will restart or be extended.
 
 ComfoCool permission allows the unit to decide whether cooling may run. It does not report compressor activity or force cooling to start. Scheduling, season, Away, fan state, bypass state, temperatures and faults can prevent cooling even when permission is enabled.
 
@@ -162,7 +162,9 @@ Report bugs through [GitHub issues](https://github.com/julioromano/ha-comfoconne
 
 The [Daikin EKRHH integration](https://github.com/gerione/daikin-ha-ekrhh-modbus) was a functional reference for UI setup and device-specific entities. This implementation uses the current HA shared Modbus APIs.
 
-## Hardware acceptance checklist
+## Hardware regression checklist
+
+Use these checks when changing protocol behavior or testing new firmware on the supported ComfoAir Q600 and ComfoConnect PRO gateway.
 
 - [ ] Record Q600 and PRO firmware versions; confirm Modbus TCP mode and the configured unit ID.
 - [ ] Add the integration and compare airflow, temperatures, humidity, filter life and alarms with Zehnder's display/app.
