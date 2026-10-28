@@ -1,6 +1,6 @@
 [project]
 name = "ha-comfoconnect-pro"
-version = "0.1.0"
+version = "1.0.0"
 description = "Home Assistant integration for Zehnder ComfoConnect PRO Modbus TCP"
 license = "MIT"
 license-files = ["LICENSE"]
