@@ -6,6 +6,7 @@ from datetime import timedelta
 from typing import final, override
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -13,11 +14,11 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from modbus_connection import ModbusError, ModbusUnit
 
 from .const import (
+    DEFAULT_SCAN_INTERVAL_SECONDS,
     DOMAIN,
     EXTERNAL_SETPOINT_MAX,
     EXTERNAL_SETPOINT_MIN,
     MODEL_NAME,
-    SCAN_INTERVAL_SECONDS,
 )
 from .protocol import OPTIONAL_FIELDS, ComfoAirQ600, Snapshot, Value
 
@@ -37,7 +38,11 @@ class ComfoConnectCoordinator(DataUpdateCoordinator[Snapshot]):
             _LOGGER,
             name=MODEL_NAME,
             config_entry=entry,
-            update_interval=timedelta(seconds=SCAN_INTERVAL_SECONDS),
+            update_interval=timedelta(
+                seconds=entry.options.get(
+                    CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_SECONDS
+                )
+            ),
             always_update=False,
         )
         self.device = ComfoAirQ600(unit)

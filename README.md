@@ -77,6 +77,8 @@ Setup performs a read-only connection-status probe. Select the actual model your
 
 Use **Reconfigure** on the integration to change an address, port or unit ID for the same device. Entity identifiers remain stable. Duplicate normalized host/port/unit combinations are rejected. DNS aliases and an IP address pointing to the same gateway cannot be recognized as the same physical device; use a consistent endpoint spelling across integrations to share the connection.
 
+Use **Configure** on the integration entry to set its **Refresh interval** in seconds. The default and minimum are **5 seconds**, and longer intervals must be whole seconds. Saving a changed interval automatically reloads that entry and preserves its entities and automations. Existing entries without a saved interval also use the 5-second default.
+
 ## Entities
 
 The integration registers 40 entities on one Q600 device. Twelve accessory entities start disabled and are not polled until enabled; enable the relevant ones in the entity settings if those accessories are installed. Home Assistant may reload the entry after an entity is enabled. Enabled accessories are populated after platform setup and on subsequent polls. A successful read of zero does not prove an accessory is installed.
@@ -105,7 +107,7 @@ Selecting a preset does not silently disable Auto mode. Change Auto explicitly w
 
 The HA external-setpoint control accepts **5–35 °C**, in **0.1 °C** steps. This is an **integration UI policy matching the previous YAML control**, not a manufacturer-defined device limit. The reviewed manuals supply no external-setpoint minimum or maximum. Fixed-profile defaults such as 18/20/24 °C and the unit's air/storage/installation temperature ranges are not setpoint bounds. The HA-independent protocol retains the unsigned-register encoding range of 0–6553.5 °C. Existing device readback outside the HA control range remains visible without clamping; HA commands outside 5–35 °C are rejected. Acknowledging a Modbus write does not guarantee the unit can achieve that comfort temperature.
 
-Boost duration accepts **0–65535 seconds**. The special value **65535 means 24 hours**, and the entity exposes `effective_duration_seconds: 86400` for that value. Set the configured session length before activating boost. Once boost is enabled, the device updates the same register with the **remaining time**, so the number also acts as a countdown, refreshed on each 15-second poll. The displayed value therefore reflects remaining time during boost rather than retaining the original session length. Changing it while boost is active does not guarantee that the current timer will restart or be extended.
+Boost duration accepts **0–65535 seconds**. The special value **65535 means 24 hours**, and the entity exposes `effective_duration_seconds: 86400` for that value. Set the configured session length before activating boost. Once boost is enabled, the device updates the same register with the **remaining time**, so the number also acts as a countdown, refreshed on each poll (every 5 seconds by default, following the configured refresh interval). The displayed value therefore reflects remaining time during boost rather than retaining the original session length. Changing it while boost is active does not guarantee that the current timer will restart or be extended.
 
 ComfoCool permission allows the unit to decide whether cooling may run. It does not report compressor activity or force cooling to start. Scheduling, season, Away, fan state, bypass state, temperatures and faults can prevent cooling even when permission is enabled.
 
@@ -115,7 +117,7 @@ Humidity follows the manufacturer's unscaled percentage definition. Values outsi
 
 ## Updates, failures and diagnostics
 
-The integration polls every 15 seconds and reads back immediately after a write. Device code uses typed `modbus_connection.model` components. Home Assistant owns the shared TCP connection through `async_get_unit` and temporary setup probes through `async_get_temporary_unit`, following the [modern Modbus integration architecture](https://home-assistant-libs.github.io/modbus-connection/home-assistant/integration/). No YAML hub or separate socket is needed.
+The integration polls every 5 seconds by default, with a configurable refresh interval per integration entry, and reads back immediately after a write. Device code uses typed `modbus_connection.model` components. Home Assistant owns the shared TCP connection through `async_get_unit` and temporary setup probes through `async_get_temporary_unit`, following the [modern Modbus integration architecture](https://home-assistant-libs.github.io/modbus-connection/home-assistant/integration/). No YAML hub or separate socket is needed.
 
 Core reads use separate contiguous blocks for alarms/airflow, duct temperatures, duct humidity, filter life, settings, operating coils, error/standby flags and filter status. A device-rejected block or isolated request timeout makes only that block's entities unavailable. Other successfully read groups remain usable, including connection status. Failed fields and their raw words are cleared for that cycle and retried on subsequent polls. An illegal address on an enabled accessory is recorded as unsupported, separately from transient failures, and is also retried.
 

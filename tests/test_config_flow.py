@@ -189,3 +189,97 @@ def test_normalize_hosts(host, expected):
 
 def test_schema_defaults():
     assert DATA_SCHEMA({"host": "gateway.local"}) == CONNECTION_DATA
+
+
+@pytest.mark.parametrize("options", [{}, {"scan_interval": 30}])
+async def test_options_gui_and_validation_errors_are_serializable(
+    hass, hass_client, entry, options
+):
+    hass.config_entries.async_update_entry(entry, options=options)
+    assert await async_setup_component(hass, "config", {})
+    client = await hass_client()
+    response = await client.post(
+        "/api/config/config_entries/options/flow", json={"handler": entry.entry_id}
+    )
+    assert response.status == 200
+    form = await response.json()
+    assert form["type"] == "form"
+    assert form["step_id"] == "init"
+    assert len(form["data_schema"]) == 1
+    field = form["data_schema"][0]
+    assert field["name"] == "scan_interval"
+    assert field["default"] == 5
+    assert field["selector"]["number"] == {
+        "min": 5,
+        "step": 1,
+        "unit_of_measurement": "s",
+        "mode": "box",
+    }
+    if options:
+        assert field["description"]["suggested_value"] == 30
+
+    response = await client.post(
+        f"/api/config/config_entries/options/flow/{form['flow_id']}",
+        json={"scan_interval": 5.5},
+    )
+    assert response.status == 200
+    form = await response.json()
+    assert form["errors"] == {"scan_interval": "invalid_scan_interval"}
+    assert len(form["data_schema"]) == 1
+    assert entry.options == options
+
+
+@pytest.mark.parametrize("interval", [5.0, 30.0])
+async def test_options_save_and_prefill_current_interval(
+    hass, hass_client, entry, interval
+):
+    assert await async_setup_component(hass, "config", {})
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"] is FlowResultType.FORM
+    with patch("homeassistant.config_entries.ConfigEntries.async_reload") as reload:
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"], {"scan_interval": interval}
+        )
+        await hass.async_block_till_done()
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options == {"scan_interval": int(interval)}
+    assert type(entry.options["scan_interval"]) is int
+    assert entry.data == CONNECTION_DATA
+    reload.assert_awaited_once_with(entry.entry_id)
+
+    client = await hass_client()
+    response = await client.post(
+        "/api/config/config_entries/options/flow", json={"handler": entry.entry_id}
+    )
+    assert response.status == 200
+    form = await response.json()
+    assert form["data_schema"][0]["description"]["suggested_value"] == interval
+
+
+@pytest.mark.parametrize(
+    "interval",
+    [
+        4,
+        0,
+        -5,
+        5.5,
+        float("nan"),
+        float("inf"),
+        float("-inf"),
+        True,
+        "bad",
+        None,
+        1e100,
+    ],
+)
+async def test_invalid_refresh_intervals_do_not_change_options(
+    hass, entry, unit, interval
+):
+    hass.config_entries.async_update_entry(entry, options={"scan_interval": 30})
+    result = await hass.config_entries.options.async_init(
+        entry.entry_id, data={"scan_interval": interval}
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"scan_interval": "invalid_scan_interval"}
+    assert entry.options == {"scan_interval": 30}
+    assert unit.read_events == []

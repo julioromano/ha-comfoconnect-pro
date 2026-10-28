@@ -27,6 +27,19 @@
       "reconfigure_successful": "The connection was updated successfully."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Polling options",
+        "description": "Choose how often to refresh device state over Modbus. The integration reloads automatically when the interval changes.",
+        "data": {"scan_interval": "Refresh interval"},
+        "data_description": {"scan_interval": "Time between polls in whole seconds (minimum 5)."}
+      }
+    },
+    "error": {
+      "invalid_scan_interval": "Enter a whole number of seconds, 5 or greater."
+    }
+  },
   "selector": {"model": {"options": {"comfoair_q600": "Zehnder ComfoAir Q600"}}},
   "entity": {
     "select": {

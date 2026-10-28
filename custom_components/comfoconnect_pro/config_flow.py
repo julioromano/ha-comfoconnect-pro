@@ -4,12 +4,19 @@ import ipaddress
 import logging
 import math
 import re
+from datetime import timedelta
 from typing import Any, final, override
 
 import probatio
 from homeassistant.components.modbus import async_get_temporary_unit
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_MODEL, CONF_PORT
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlowWithReload,
+)
+from homeassistant.const import CONF_HOST, CONF_MODEL, CONF_PORT, CONF_SCAN_INTERVAL
+from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.selector import (
     NumberSelector,  # pyright: ignore[reportUnknownVariableType]
@@ -25,8 +32,10 @@ from modbus_connection import ModbusError, ModbusTcpParams
 from .const import (
     CONF_UNIT_ID,
     DEFAULT_PORT,
+    DEFAULT_SCAN_INTERVAL_SECONDS,
     DEFAULT_UNIT_ID,
     DOMAIN,
+    MIN_SCAN_INTERVAL_SECONDS,
     MODEL_NAME,
     MODEL_Q600,
 )
@@ -76,12 +85,34 @@ DATA_SCHEMA = probatio.Schema(
     }
 )
 
+OPTIONS_SCHEMA = probatio.Schema(
+    {
+        probatio.Required(
+            CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL_SECONDS
+        ): NumberSelector(
+            NumberSelectorConfig(
+                min=MIN_SCAN_INTERVAL_SECONDS,
+                step=1,
+                unit_of_measurement="s",
+                mode=NumberSelectorMode.BOX,
+            )
+        ),
+    }
+)
+
 
 @final
 class ComfoConnectConfigFlow(ConfigFlow, domain=DOMAIN):
     """Configure the device rather than a separate YAML Modbus hub."""
 
     VERSION = 1
+
+    @staticmethod
+    @callback
+    @override
+    def async_get_options_flow(config_entry: ConfigEntry) -> ComfoConnectOptionsFlow:
+        """Expose polling preferences separately from the device connection."""
+        return ComfoConnectOptionsFlow()
 
     @override
     async def async_step_user(
@@ -149,3 +180,32 @@ class ComfoConnectConfigFlow(ConfigFlow, domain=DOMAIN):
         if state == 0:
             return None
         return CONNECTION_STATES.get(state, "unknown_connection_state")
+
+
+@final
+class ComfoConnectOptionsFlow(OptionsFlowWithReload):
+    """Save polling preferences and reload the entry when they change."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            try:
+                options: dict[str, Any] = OPTIONS_SCHEMA(user_input)
+                options[CONF_SCAN_INTERVAL] = _integer(options[CONF_SCAN_INTERVAL])
+                # Reject intervals the coordinator cannot represent before saving.
+                _ = timedelta(seconds=options[CONF_SCAN_INTERVAL])
+            except probatio.Invalid, OverflowError:
+                errors[CONF_SCAN_INTERVAL] = "invalid_scan_interval"
+            else:
+                return self.async_create_entry(
+                    title="", data={**self.config_entry.options, **options}
+                )
+        return self.async_show_form(
+            step_id="init",
+            data_schema=self.add_suggested_values_to_schema(
+                OPTIONS_SCHEMA, self.config_entry.options
+            ),
+            errors=errors,
+        )

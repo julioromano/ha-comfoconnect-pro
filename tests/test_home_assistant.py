@@ -1,6 +1,7 @@
 """Exercise real config-entry lifecycle, entities and HA service calls."""
 
 import json
+from datetime import timedelta
 from unittest.mock import patch
 
 import pytest
@@ -9,7 +10,9 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.setup import async_setup_component
+from homeassistant.util import dt as dt_util
 from modbus_connection.exceptions import IllegalDataAddressError, ModbusTimeoutError
+from pytest_homeassistant_custom_component.common import async_fire_time_changed
 
 from custom_components.comfoconnect_pro.diagnostics import (
     async_get_config_entry_diagnostics,
@@ -30,7 +33,7 @@ async def test_entities_metadata_and_optional_defaults(hass, configured):
     device = dr.async_get(hass).async_get(entries[0].device_id)
     assert device.manufacturer == "Zehnder"
     assert device.model == "ComfoAir Q600"
-    assert configured.runtime_data.update_interval.total_seconds() == 15
+    assert configured.runtime_data.update_interval.total_seconds() == 5
     for item in entries:
         key = item.unique_id.removeprefix(f"{configured.entry_id}_")
         optional = key.startswith("co2_zone_") or key in {
@@ -53,6 +56,63 @@ async def test_entities_metadata_and_optional_defaults(hass, configured):
         ).attributes["code"]
         == "unknown_250"
     )
+
+
+@pytest.mark.parametrize("options,interval", [({}, 5), ({"scan_interval": 30}, 30)])
+async def test_scheduled_poll_uses_configured_interval(
+    hass,
+    entry,
+    unit,
+    mock_connection,
+    enable_custom_integrations,
+    freezer,
+    options,
+    interval,
+):
+    hass.config_entries.async_update_entry(entry, options=options)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    airflow_id = entity_id(hass, entry, "airflow", "sensor")
+    assert entry.runtime_data.update_interval == timedelta(seconds=interval)
+    unit.input[6] = 410
+
+    freezer.tick(timedelta(seconds=interval - 2))
+    async_fire_time_changed(hass, dt_util.utcnow())
+    await hass.async_block_till_done()
+    assert hass.states.get(airflow_id).state == "350"
+
+    freezer.tick(timedelta(seconds=2))
+    async_fire_time_changed(hass, dt_util.utcnow())
+    await hass.async_block_till_done()
+    assert hass.states.get(airflow_id).state == "410"
+
+
+async def test_options_reload_applies_interval_and_preserves_identity(
+    hass, configured, unit
+):
+    registry = er.async_get(hass)
+    before = {
+        item.unique_id: (item.entity_id, item.device_id)
+        for item in er.async_entries_for_config_entry(registry, configured.entry_id)
+    }
+    previous_coordinator = configured.runtime_data
+    writes = []
+    unit.on_write(writes.append)
+    result = await hass.config_entries.options.async_init(configured.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"scan_interval": 30}
+    )
+    await hass.async_block_till_done()
+    assert configured.state is ConfigEntryState.LOADED
+    assert configured.runtime_data is not previous_coordinator
+    assert configured.runtime_data.update_interval == timedelta(seconds=30)
+    assert configured.options == {"scan_interval": 30}
+    after = {
+        item.unique_id: (item.entity_id, item.device_id)
+        for item in er.async_entries_for_config_entry(registry, configured.entry_id)
+    }
+    assert after == before
+    assert writes == []
 
 
 async def test_controls_write_and_refresh_cached_states(hass, configured, unit):
@@ -205,6 +265,7 @@ async def test_unload_releases_connection(hass, configured, connection):
 
 
 async def test_loaded_reconfigure_keeps_entity_and_device_identity(hass, configured):
+    hass.config_entries.async_update_entry(configured, options={"scan_interval": 30})
     registry = er.async_get(hass)
     before = {
         item.unique_id: (item.entity_id, item.device_id)
@@ -224,6 +285,8 @@ async def test_loaded_reconfigure_keeps_entity_and_device_identity(hass, configu
     assert before == after
     assert configured.data["host"] == "new-gateway.local"
     assert configured.state is ConfigEntryState.LOADED
+    assert configured.options == {"scan_interval": 30}
+    assert configured.runtime_data.update_interval == timedelta(seconds=30)
 
 
 async def test_unknown_connection_status_is_preserved(hass, configured, unit):
