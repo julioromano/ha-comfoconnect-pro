@@ -5,8 +5,6 @@ from homeassistant.const import Platform
 DOMAIN = "comfoconnect_pro"
 NAME = "Zehnder ComfoConnect PRO Modbus"
 MIN_HA_VERSION = "2026.10.2"
-MODEL_Q600 = "comfoair_q600"
-MODEL_NAME = "ComfoAir Q600"
 CONF_UNIT_ID = "unit_id"
 DEFAULT_PORT = 502
 DEFAULT_UNIT_ID = 1

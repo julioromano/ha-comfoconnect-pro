@@ -23,7 +23,7 @@ Use GitHub as `origin`. Create feature branches from the latest `origin/main`, p
    git push origin refs/tags/v0.1.0:refs/tags/v0.1.0
    ```
 
-4. Create a GitHub Release from the existing tag, documenting changes, the minimum Home Assistant version, supported device and known limitations. The ComfoAir Q600 is at the moment the only supported device and has been tested with a physical ComfoConnect PRO gateway. Tags and released versions are immutable; ship corrections as a new patch version.
+4. Create a GitHub Release from the existing tag, documenting changes, the minimum Home Assistant version, supported models and known limitations. Supported models are Q350, Q450, Q600, Flex 250 and Flex 350; physical testing currently covers Q600 with a ComfoConnect PRO gateway. Describe the other models as supported from manufacturer specifications and simulated verification. Note the Q600-only ComfoCool restriction and that correcting a model removes inapplicable entities while preserving common identities. Tags and released versions are immutable; ship corrections as a new patch version.
 5. Verify installation or upgrade through HACS using the released version. Use the standard repository layout; no custom ZIP asset or `zip_release` setting is needed.
 
 HACS uses [GitHub Releases for release-based versioning](https://hacs.xyz/docs/publish/start/#versions); pushing a tag alone does not publish a release. Distribute through HACS custom repositories initially. Consider default-directory submission after gaining experience maintaining public releases.
@@ -31,5 +31,7 @@ HACS uses [GitHub Releases for release-based versioning](https://hacs.xyz/docs/p
 ## Ongoing maintenance
 
 Handle bugs and feature requests on GitHub, and link fixes to the relevant issues. Review Home Assistant compatibility and dependency updates through focused changes, run the full checks and publish fixes as patch releases. Preserve the existing unit coverage gate and separate TCP integration tests.
+
+Maintain the model/capability registry and [register reference](docs/register-map.md) together. Record manufacturer source revisions, relevant pages and review dates when compatibility changes; do not treat upload dates as revisions or simulated tests as physical validation. Collect hardware-checklist results for Q350, Q450, Flex 250 and Flex 350 as follow-up validation. Classic models remain excluded until authoritative Modbus applicability documentation resolves the manual's conditional software-1.1 reference. Existing Q600 entries need no configuration migration for the expanded model list.
 
 The HACS workflow runs on GitHub on pushes, pull requests, weekly and on manual dispatch, with read-only permissions and PR comments disabled. Its action reference uses the latest stable release available when added; review upstream action releases during dependency maintenance.

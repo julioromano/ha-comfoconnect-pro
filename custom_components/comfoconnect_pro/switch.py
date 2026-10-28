@@ -23,7 +23,9 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     async_add_entities(
-        ComfoConnectSwitch(entry.runtime_data, description) for description in SWITCHES
+        ComfoConnectSwitch(entry.runtime_data, description)
+        for description in SWITCHES
+        if entry.runtime_data.device.profile.supports(description.key)
     )
 
 

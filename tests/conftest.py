@@ -7,7 +7,8 @@ from homeassistant.core import HomeAssistant
 from modbus_connection.mock import MockModbusConnection, MockModbusUnit
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.comfoconnect_pro.const import DOMAIN, MODEL_Q600
+from custom_components.comfoconnect_pro.const import DOMAIN
+from custom_components.comfoconnect_pro.models import MODEL_Q600
 
 CONNECTION_DATA = {
     "host": "gateway.local",

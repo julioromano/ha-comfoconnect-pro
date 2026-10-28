@@ -4,19 +4,19 @@
     "step": {
       "user": {
         "title": "Connect your Zehnder ventilation unit",
-        "description": "Enable Modbus TCP on the ComfoConnect PRO first. Select the connected ventilation model; the gateway cannot identify the exact Q-series model over this interface.",
+        "description": "Enable Modbus TCP on the ComfoConnect PRO first. Select the connected ventilation model; this interface cannot verify the selected model or identify its serial number.",
         "data": {"host": "Hostname or IP address", "port": "TCP port", "unit_id": "Modbus unit ID", "model": "Ventilation model"}
       },
       "reconfigure": {
         "title": "Change the connection",
-        "description": "Update the connection to the same ventilation unit. Existing entities and automations are preserved.",
+        "description": "Update the connection or correct the selected model. Common entity IDs are preserved. Entities that do not apply to the selected model are removed; update any automations using them.",
         "data": {"host": "Hostname or IP address", "port": "TCP port", "unit_id": "Modbus unit ID", "model": "Ventilation model"}
       }
     },
     "error": {
       "cannot_connect": "Unable to read the gateway. Check its address, TCP port, unit ID and Modbus TCP mode. Another integration may be using conflicting connection settings.",
-      "wrong_device": "The gateway reports that the ventilation unit is not a compatible ComfoAir Q.",
-      "incompatible_version": "The gateway reports an incompatible ComfoAir Q firmware version. Check the device firmware.",
+      "wrong_device": "The gateway reports an incompatible ventilation unit for the Q/Flex interface. Check the connected device and commissioning.",
+      "incompatible_version": "The gateway reports an incompatible ventilation-unit firmware version. Check the device firmware.",
       "no_ventilation_unit": "The gateway cannot detect a ventilation unit. Check the ComfoNet connection and commissioning.",
       "unknown_connection_state": "The gateway returned an unknown connection status. Check its configuration and firmware.",
       "invalid_input": "Enter a valid hostname or IP address, an integer TCP port (1–65535), unit ID (1–247) and supported model.",
@@ -40,7 +40,7 @@
       "invalid_scan_interval": "Enter a whole number of seconds, 5 or greater."
     }
   },
-  "selector": {"model": {"options": {"comfoair_q600": "Zehnder ComfoAir Q600"}}},
+  "selector": {"model": {"options": {"comfoair_q350": "Zehnder ComfoAir Q350", "comfoair_q450": "Zehnder ComfoAir Q450", "comfoair_q600": "Zehnder ComfoAir Q600", "comfoair_flex250": "Zehnder ComfoAir Flex 250", "comfoair_flex350": "Zehnder ComfoAir Flex 350"}}},
   "entity": {
     "select": {
       "ventilation_preset": {"name": "Ventilation preset", "state": {"away": "Away", "low": "Low", "medium": "Medium", "high": "High"}},

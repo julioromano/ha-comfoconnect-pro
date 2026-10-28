@@ -6,7 +6,7 @@ from datetime import timedelta
 from typing import final, override
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_SCAN_INTERVAL
+from homeassistant.const import CONF_MODEL, CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -18,9 +18,9 @@ from .const import (
     DOMAIN,
     EXTERNAL_SETPOINT_MAX,
     EXTERNAL_SETPOINT_MIN,
-    MODEL_NAME,
 )
-from .protocol import OPTIONAL_FIELDS, ComfoAirQ600, Snapshot, Value
+from .models import MODELS
+from .protocol import ComfoAir, Snapshot, Value
 
 _LOGGER = logging.getLogger(__name__)
 type ComfoConnectConfigEntry = ConfigEntry[ComfoConnectCoordinator]
@@ -33,10 +33,11 @@ class ComfoConnectCoordinator(DataUpdateCoordinator[Snapshot]):
     def __init__(
         self, hass: HomeAssistant, entry: ComfoConnectConfigEntry, unit: ModbusUnit
     ) -> None:
+        model = MODELS[entry.data[CONF_MODEL]]
         super().__init__(
             hass,
             _LOGGER,
-            name=MODEL_NAME,
+            name=model.name,
             config_entry=entry,
             update_interval=timedelta(
                 seconds=entry.options.get(
@@ -45,18 +46,20 @@ class ComfoConnectCoordinator(DataUpdateCoordinator[Snapshot]):
             ),
             always_update=False,
         )
-        self.device = ComfoAirQ600(unit)
+        self.device = ComfoAir(unit, entry.data[CONF_MODEL])
         self.device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
-            name=MODEL_NAME,
+            name=model.name,
             manufacturer="Zehnder",
-            model=MODEL_NAME,
+            model=model.name,
         )
 
     @override
     async def _async_update_data(self) -> Snapshot:
         try:
-            optional_fields = frozenset(self.async_contexts()) & OPTIONAL_FIELDS
+            optional_fields = (
+                frozenset(self.async_contexts()) & self.device.optional_fields
+            )
             return await self.device.async_update(optional_fields)
         except ModbusError as err:
             raise UpdateFailed("Unable to read ComfoConnect PRO") from err

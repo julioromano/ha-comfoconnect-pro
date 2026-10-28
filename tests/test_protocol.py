@@ -4,11 +4,11 @@ import pytest
 from modbus_connection.exceptions import IllegalDataAddressError, ModbusTimeoutError
 from modbus_connection.mock import MockModbusUnit
 
-from custom_components.comfoconnect_pro.protocol import OPTIONAL_FIELDS, ComfoAirQ600
+from custom_components.comfoconnect_pro.protocol import OPTIONAL_FIELDS, ComfoAir
 
 
 async def test_decodes_register_spaces_and_signed_temperature(unit: MockModbusUnit):
-    device = ComfoAirQ600(unit)
+    device = ComfoAir(unit)
     data = await device.async_update(OPTIONAL_FIELDS)
     assert data.values["connection_state"] == 0
     assert data.values["airflow"] == 350
@@ -24,7 +24,7 @@ async def test_decodes_register_spaces_and_signed_temperature(unit: MockModbusUn
 
 async def test_optional_register_rejection_does_not_disable_core(unit: MockModbusUnit):
     unit.fail_read(17, IllegalDataAddressError(), register_type="input")
-    data = await ComfoAirQ600(unit).async_update(OPTIONAL_FIELDS)
+    data = await ComfoAir(unit).async_update(OPTIONAL_FIELDS)
     assert data.values["co2_zone_1"] is None
     assert data.values["co2_zone_2"] == 601
     assert data.values["airflow"] == 350
@@ -33,7 +33,7 @@ async def test_optional_register_rejection_does_not_disable_core(unit: MockModbu
 
 async def test_timeout_is_not_treated_as_optional_absence(unit: MockModbusUnit):
     unit.fail_read(17, ModbusTimeoutError(), register_type="input")
-    data = await ComfoAirQ600(unit).async_update(OPTIONAL_FIELDS)
+    data = await ComfoAir(unit).async_update(OPTIONAL_FIELDS)
     assert "co2_zone_1" not in data.unsupported
     assert "co2_zone_1" in data.failed_fields
     assert data.values["airflow"] == 350
@@ -42,7 +42,7 @@ async def test_timeout_is_not_treated_as_optional_absence(unit: MockModbusUnit):
 async def test_preset_writes_only_the_requested_register(unit: MockModbusUnit):
     writes = []
     unit.on_write(writes.append)
-    await ComfoAirQ600(unit).async_write("ventilation_preset", 3)
+    await ComfoAir(unit).async_write("ventilation_preset", 3)
     assert [(w.function_code, w.address, w.values) for w in writes] == [(6, 0, [3])]
     assert unit.coil[5] is True
 
@@ -60,7 +60,7 @@ async def test_preset_writes_only_the_requested_register(unit: MockModbusUnit):
 async def test_command_coils_write_true_once(unit: MockModbusUnit, command, address):
     writes = []
     unit.on_write(writes.append)
-    device = ComfoAirQ600(unit)
+    device = ComfoAir(unit)
     await device.async_write(command, True)
     assert [(w.function_code, w.address, w.values) for w in writes] == [
         (5, address, [True])
@@ -72,7 +72,7 @@ async def test_command_coils_write_true_once(unit: MockModbusUnit, command, addr
 async def test_temperature_dependencies_are_checked_without_changing_mode(
     unit: MockModbusUnit,
 ):
-    device = ComfoAirQ600(unit)
+    device = ComfoAir(unit)
     with pytest.raises(ValueError, match="external"):
         await device.async_write("external_setpoint", 22.5)
     unit.holding[2] = 2
@@ -83,7 +83,7 @@ async def test_temperature_dependencies_are_checked_without_changing_mode(
 
 
 async def test_every_measurement_and_status_field(unit):
-    data = await ComfoAirQ600(unit).async_update(OPTIONAL_FIELDS)
+    data = await ComfoAir(unit).async_update(OPTIONAL_FIELDS)
     assert data.values == {
         "connection_state": 0,
         **{
@@ -144,7 +144,7 @@ async def test_invalid_writes_never_reach_device(unit, key, value):
     writes = []
     unit.on_write(writes.append)
     with pytest.raises(ValueError):
-        await ComfoAirQ600(unit).async_write(key, value)
+        await ComfoAir(unit).async_write(key, value)
     assert writes == []
 
 
@@ -166,7 +166,7 @@ async def test_all_writable_settings(unit, key, value, address, space):
     unit.holding[2] = 2 if key == "external_setpoint" else 0
     writes = []
     unit.on_write(writes.append)
-    await ComfoAirQ600(unit).async_write(key, value)
+    await ComfoAir(unit).async_write(key, value)
     assert len(writes) == 1
     assert writes[0].register_type == space
     assert writes[0].address == address
@@ -176,7 +176,7 @@ async def test_all_writable_settings(unit, key, value, address, space):
 @pytest.mark.parametrize("state", [30, 40, 50, 255])
 async def test_disconnected_unit_reads_status_only_and_rejects_writes(unit, state):
     unit.input[0] = state
-    device = ComfoAirQ600(unit)
+    device = ComfoAir(unit)
     data = await device.async_update()
     assert data.values == {"connection_state": state}
     assert len(unit.read_events) == 1
@@ -185,7 +185,7 @@ async def test_disconnected_unit_reads_status_only_and_rejects_writes(unit, stat
 
 
 async def test_optional_values_are_cleared_and_can_recover(unit):
-    device = ComfoAirQ600(unit)
+    device = ComfoAir(unit)
     assert (await device.async_update(OPTIONAL_FIELDS)).values[
         "room_temperature"
     ] == 21.5

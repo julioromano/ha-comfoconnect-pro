@@ -11,7 +11,8 @@ from homeassistant.helpers import entity_registry as er
 from modbus_connection import ModbusTcpParams
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.comfoconnect_pro.const import DOMAIN, MODEL_Q600
+from custom_components.comfoconnect_pro.const import DOMAIN
+from custom_components.comfoconnect_pro.models import MODEL_Q600
 
 pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("socket_enabled")]
 
@@ -104,20 +105,21 @@ async def gateway_server():
         await gateway.disconnect()
 
 
+@pytest.mark.parametrize("model", [MODEL_Q600, "comfoair_flex350"])
 async def test_tcp_setup_commands_sharing_and_reconnect(
-    hass, enable_custom_integrations
+    hass, enable_custom_integrations, model
 ):
     async with gateway_server() as (gateway, port):
         data = {
             CONF_HOST: "127.0.0.1",
             CONF_PORT: port,
             "unit_id": 7,
-            CONF_MODEL: MODEL_Q600,
+            CONF_MODEL: model,
         }
-        first = MockConfigEntry(domain=DOMAIN, title="Q600", data=data)
+        first = MockConfigEntry(domain=DOMAIN, title="Ventilation", data=data)
         first.add_to_hass(hass)
         second = MockConfigEntry(
-            domain=DOMAIN, title="Another Q600", data={**data, "unit_id": 8}
+            domain=DOMAIN, title="Another unit", data={**data, "unit_id": 8}
         )
         try:
             assert await hass.config_entries.async_setup(first.entry_id)
@@ -144,6 +146,15 @@ async def test_tcp_setup_commands_sharing_and_reconnect(
             assert gateway.requests.count((7, 5, 0, 0xFF00)) == 1
             assert gateway.holdings[0] == 3
             registry = er.async_get(hass)
+            assert bool(
+                registry.async_get_entity_id(
+                    "switch", DOMAIN, f"{first.entry_id}_comfocool"
+                )
+            ) == (model == MODEL_Q600)
+            assert not any(
+                fc == 1 and address <= 8 < address + count
+                for _, fc, address, count in gateway.requests
+            )
             co2_id = registry.async_get_entity_id(
                 "sensor", DOMAIN, f"{first.entry_id}_co2_zone_1"
             )

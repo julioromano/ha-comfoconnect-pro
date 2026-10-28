@@ -36,10 +36,9 @@ from .const import (
     DEFAULT_UNIT_ID,
     DOMAIN,
     MIN_SCAN_INTERVAL_SECONDS,
-    MODEL_NAME,
-    MODEL_Q600,
 )
-from .protocol import CONNECTION_STATES, ComfoAirQ600
+from .models import MODEL_Q600, MODELS
+from .protocol import CONNECTION_STATES, ComfoAir
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -77,7 +76,7 @@ DATA_SCHEMA = probatio.Schema(
         ),
         probatio.Required(CONF_MODEL, default=MODEL_Q600): SelectSelector(
             SelectSelectorConfig(
-                options=[MODEL_Q600],
+                options=list(MODELS),
                 mode=SelectSelectorMode.DROPDOWN,
                 translation_key="model",
             )
@@ -154,9 +153,19 @@ class ComfoConnectConfigFlow(ConfigFlow, domain=DOMAIN):
                 if error:
                     errors["base"] = error
                 elif entry is not None:
-                    return self.async_update_reload_and_abort(entry, data_updates=data)
+                    # Preserve custom entry titles when correcting the model.
+                    title = (
+                        MODELS[data[CONF_MODEL]].name
+                        if entry.title == MODELS[entry.data[CONF_MODEL]].name
+                        else entry.title
+                    )
+                    return self.async_update_reload_and_abort(
+                        entry, title=title, data_updates=data
+                    )
                 else:
-                    return self.async_create_entry(title=MODEL_NAME, data=data)
+                    return self.async_create_entry(
+                        title=MODELS[data[CONF_MODEL]].name, data=data
+                    )
         schema = (
             self.add_suggested_values_to_schema(DATA_SCHEMA, entry.data)
             if entry
@@ -171,7 +180,7 @@ class ComfoConnectConfigFlow(ConfigFlow, domain=DOMAIN):
                 ModbusTcpParams(host=data[CONF_HOST], port=data[CONF_PORT]),
                 data[CONF_UNIT_ID],
             ) as unit:
-                state = await ComfoAirQ600(unit).async_validate()
+                state = await ComfoAir(unit, data[CONF_MODEL]).async_validate()
         except ModbusError, HomeAssistantError:
             return "cannot_connect"
         except Exception:

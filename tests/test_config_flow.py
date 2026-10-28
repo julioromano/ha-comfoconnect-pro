@@ -38,6 +38,13 @@ async def test_gui_form_and_validation_errors_are_serializable(
     assert fields["port"]["default"] == 502
     assert fields["unit_id"]["default"] == 1
     assert fields["model"]["default"] == "comfoair_q600"
+    assert fields["model"]["selector"]["select"]["options"] == [
+        "comfoair_q350",
+        "comfoair_q450",
+        "comfoair_q600",
+        "comfoair_flex250",
+        "comfoair_flex350",
+    ]
     if step_id == "reconfigure":
         for key, value in CONNECTION_DATA.items():
             assert fields[key]["description"]["suggested_value"] == value

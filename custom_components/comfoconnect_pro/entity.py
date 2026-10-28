@@ -14,7 +14,7 @@ from .protocol import Value
 class ComfoConnectEntity[DescriptionT: EntityDescription](
     BaseCoordinatorEntity[ComfoConnectCoordinator]
 ):
-    """One field on the Q600; identifiers survive connection reconfiguration."""
+    """One ventilation field; identifiers survive connection reconfiguration."""
 
     _attr_has_entity_name: bool = True
 

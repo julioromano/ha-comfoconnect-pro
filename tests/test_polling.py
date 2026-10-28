@@ -12,7 +12,7 @@ from modbus_connection.exceptions import (
     ServerDeviceBusyError,
 )
 
-from custom_components.comfoconnect_pro.protocol import ComfoAirQ600
+from custom_components.comfoconnect_pro.protocol import ComfoAir
 
 
 @pytest.mark.parametrize(
@@ -49,7 +49,7 @@ from custom_components.comfoconnect_pro.protocol import ComfoAirQ600
 async def test_failed_block_clears_only_its_values_and_recovers(
     unit, space, address, fields
 ):
-    device = ComfoAirQ600(unit)
+    device = ComfoAir(unit)
     before = await device.async_update()
     unit.fail_read(address, IllegalDataAddressError(), register_type=space)
     failed = await device.async_update()
@@ -66,7 +66,7 @@ async def test_failed_block_clears_only_its_values_and_recovers(
 
 
 async def test_core_poll_never_reads_optional_addresses(unit):
-    data = await ComfoAirQ600(unit).async_update()
+    data = await ComfoAir(unit).async_update()
     assert data.polled_optional_fields == ()
     assert "room_temperature" not in data.values
     assert [(r.register_type, r.address, r.count) for r in unit.read_events] == [
@@ -86,7 +86,7 @@ async def test_only_requested_accessories_are_polled(unit):
     selected = frozenset(
         {"room_temperature", "room_humidity", "co2_zone_8", "comfohood", "comfocool"}
     )
-    data = await ComfoAirQ600(unit).async_update(selected)
+    data = await ComfoAir(unit).async_update(selected)
     assert data.polled_optional_fields == tuple(sorted(selected))
     assert data.values["co2_zone_8"] == 607
     assert "co2_zone_1" not in data.values
@@ -100,7 +100,7 @@ async def test_only_requested_accessories_are_polled(unit):
 )
 async def test_accessory_failures_are_transient_and_do_not_hide_core(unit, error):
     unit.fail_read(17, error, register_type="input")
-    data = await ComfoAirQ600(unit).async_update(frozenset({"co2_zone_1"}))
+    data = await ComfoAir(unit).async_update(frozenset({"co2_zone_1"}))
     assert data.values["airflow"] == 350
     assert data.values["co2_zone_1"] is None
     assert data.unsupported == ()
@@ -118,7 +118,7 @@ async def test_accessory_failures_are_transient_and_do_not_hide_core(unit, error
 async def test_transport_failures_abort_the_poll(unit, error):
     unit.fail_read(8, error, register_type="input")
     with pytest.raises(type(error)):
-        await ComfoAirQ600(unit).async_update()
+        await ComfoAir(unit).async_update()
     assert unit.read_events[-1].address == 8
 
 
@@ -137,7 +137,7 @@ async def test_timeout_requires_successful_status_recheck(unit):
     unit.fail_read(8, ModbusTimeoutError(), register_type="input")
     with patch.object(unit, "read_input_registers", side_effect=failing_recheck):
         with pytest.raises(ModbusTimeoutError):
-            await ComfoAirQ600(unit).async_update()
+            await ComfoAir(unit).async_update()
     assert status_reads == 2
 
 
@@ -151,8 +151,8 @@ async def test_timeout_recheck_can_report_disconnected_ventilation_unit(unit):
 
     unit.fail_read(17, ModbusTimeoutError(), register_type="input")
     with patch.object(unit, "read_input_registers", side_effect=disconnect_target):
-        data = await ComfoAirQ600(unit).async_update(frozenset({"co2_zone_1"}))
+        data = await ComfoAir(unit).async_update(frozenset({"co2_zone_1"}))
     assert data.values == {"connection_state": 50}
     assert data.raw == {"input": {0: 50}}
     with pytest.raises(ValueError, match="unavailable"):
-        await ComfoAirQ600(unit).async_write("boost", True)
+        await ComfoAir(unit).async_write("boost", True)

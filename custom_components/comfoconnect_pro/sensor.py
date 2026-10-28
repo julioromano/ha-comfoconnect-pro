@@ -1,4 +1,4 @@
-"""Measurements and diagnostic status from the published Q600 interface."""
+"""Measurements and diagnostic status from the published Q/Flex interface."""
 
 from typing import cast, final, override
 

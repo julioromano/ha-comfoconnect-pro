@@ -1,4 +1,4 @@
-"""HA-independent ComfoAir Q map from Zehnder installer manual, revision 137.
+"""HA-independent Q/Flex map from Zehnder installer manual, revision 137.
 
 All addresses below are PDU addresses: manual register number minus one.
 The caller owns the Modbus connection; this model consumes only a unit.
@@ -17,6 +17,8 @@ from modbus_connection.exceptions import (
     ModbusTimeoutError,
 )
 from modbus_connection.model import Component, Raw, coil, discrete_input, gauge, integer
+
+from .models import MODEL_Q600, MODELS
 
 type Value = int | float | bool | None
 
@@ -68,7 +70,7 @@ def _true_only(value: object) -> bool:
 
 @final
 class ConnectionStatus(Component):
-    """Gateway-to-ventilation-unit status, readable even without a Q600."""
+    """Gateway-to-ventilation-unit status, readable even without a unit."""
 
     register_space = "input"
     connection_state = integer(0, signed=False)
@@ -231,10 +233,12 @@ class Snapshot:
 
 
 @final
-class ComfoAirQ600:
-    """A Q600 behind a PRO gateway, independent of HA and the TCP backend."""
+class ComfoAir:
+    """A Q/Flex behind a PRO gateway, independent of HA and the TCP backend."""
 
-    def __init__(self, unit: ModbusUnit) -> None:
+    def __init__(self, unit: ModbusUnit, model: str = MODEL_Q600) -> None:
+        self.profile = MODELS[model]
+        self.optional_fields = OPTIONAL_FIELDS - self.profile.excluded_fields
         self._lock = asyncio.Lock()
         self.status = ConnectionStatus(unit)
         self.settings = Settings(unit)
@@ -265,6 +269,7 @@ class ComfoAirQ600:
             name: component
             for component in (self.settings, self.operating, self.commands, self.cool)
             for name in component.declared_fields
+            if self.profile.supports(name)
         }
 
     async def async_validate(self) -> int:
@@ -276,6 +281,7 @@ class ComfoAirQ600:
         self, optional_fields: frozenset[str] = _NO_OPTIONAL_FIELDS
     ) -> Snapshot:
         """Isolate rejected blocks and poll only explicitly requested accessories."""
+        optional_fields &= self.optional_fields
         async with self._lock:
             raw = await self.status.async_read_raw()
             values: dict[str, Value] = {
