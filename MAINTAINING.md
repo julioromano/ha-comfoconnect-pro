@@ -1,12 +1,19 @@
 # Maintaining and releasing
 
-[julioromano/ha-comfoconnect-pro on GitHub](https://github.com/julioromano/ha-comfoconnect-pro) is the source of truth for code, issues, pull requests and releases. Merge changes on GitHub after review and successful checks. See [CONTRIBUTING.md](CONTRIBUTING.md) for development and review expectations.
+[julioromano/ha-comfoconnect-pro on GitHub](https://github.com/julioromano/ha-comfoconnect-pro) is the source of truth for code, issues, pull requests and releases. Squash merge changes on GitHub after all required checks pass. See [CONTRIBUTING.md](CONTRIBUTING.md) for development and review expectations.
 
 ## Repository settings
 
 Keep the repository public, enable issues and Actions, set its description to "Home Assistant integration for Zehnder ComfoConnect PRO Modbus TCP" and add the topics `home-assistant`, `hacs`, `zehnder`, `comfoconnect-pro` and `modbus`. Keep HACS validation enabled without ignores; repository settings are part of validation.
 
-Protect `main` with required pull requests and the checks **Lint, types and unit coverage**, **Simulated Modbus TCP**, **Home Assistant metadata** and **HACS repository validation**. Prevent force pushes and deletion of `main`.
+Require up-to-date pull requests, squash merges and four passing GitHub Actions checks on `main`:
+
+- **Lint, types and unit coverage**
+- **Simulated Modbus TCP**
+- **Home Assistant metadata**
+- **HACS repository validation**
+
+Reviews are optional and the bypass list is empty. Require linear history and block force pushes and branch deletion.
 
 ## Development
 
