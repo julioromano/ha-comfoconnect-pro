@@ -1,7 +1,7 @@
 [project]
 name = "ha-comfoconnect-pro"
 version = "1.0.0"
-description = "Home Assistant integration for Zehnder ComfoConnect PRO Modbus TCP"
+description = "Home Assistant integration for Zehnder ComfoConnect Pro using Modbus TCP"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.14.2,<3.15"

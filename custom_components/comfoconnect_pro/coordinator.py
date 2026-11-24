@@ -9,11 +9,12 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_MODEL, CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from modbus_connection import ModbusError, ModbusUnit
 
 from .const import (
+    DEFAULT_DEVICE_NAME,
     DEFAULT_SCAN_INTERVAL_SECONDS,
     DOMAIN,
     EXTERNAL_SETPOINT_MAX,
@@ -47,12 +48,16 @@ class ComfoConnectCoordinator(DataUpdateCoordinator[Snapshot]):
             always_update=False,
         )
         self.device = ComfoAir(unit, entry.data[CONF_MODEL])
-        self.device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name=model.name,
+        identifier = (DOMAIN, entry.entry_id)
+        self.device_info = dr.DeviceInfo(
+            identifiers={identifier},
             manufacturer="Zehnder",
             model=model.name,
         )
+        # Reconfigure updates the default name of an already registered device.
+        registry = dr.async_get(hass)
+        if registry.async_get_device_by_identifier(identifier, entry.entry_id) is None:
+            self.device_info["name"] = DEFAULT_DEVICE_NAME
 
     @override
     async def _async_update_data(self) -> Snapshot:

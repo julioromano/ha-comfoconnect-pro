@@ -9,7 +9,7 @@ from homeassistant.setup import async_setup_component
 from modbus_connection.exceptions import ModbusTimeoutError
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.comfoconnect_pro.config_flow import DATA_SCHEMA, normalize_host
+from custom_components.comfoconnect_pro.config_flow import DATA_SCHEMA
 from custom_components.comfoconnect_pro.const import DOMAIN
 
 from .conftest import CONNECTION_DATA
@@ -59,7 +59,17 @@ async def test_gui_form_and_validation_errors_are_serializable(
     assert len(form["data_schema"]) == 4
 
 
-async def test_form_and_read_only_validation(hass, unit, connection):
+@pytest.mark.parametrize(
+    "host,normalized_host",
+    [
+        (" GATEWAY.local. ", "gateway.local"),
+        ("192.168.1.5", "192.168.1.5"),
+        ("[2001:0DB8::1]", "2001:db8::1"),
+    ],
+)
+async def test_form_and_read_only_validation(
+    hass, unit, connection, host, normalized_host
+):
     writes = []
     unit.on_write(writes.append)
     result = await hass.config_entries.flow.async_init(
@@ -71,11 +81,12 @@ async def test_form_and_read_only_validation(hass, unit, connection):
     ):
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
-            {"host": " GATEWAY.local. ", "port": 502.0, "unit_id": 1.0},
+            {"host": host, "port": 502.0, "unit_id": 1.0},
         )
         await hass.async_block_till_done()
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["data"] == CONNECTION_DATA
+    assert result["title"] == f"Zehnder ComfoConnect Pro at {normalized_host}"
+    assert result["data"] == {**CONNECTION_DATA, "host": normalized_host}
     assert type(result["data"]["port"]) is int
     assert type(result["data"]["unit_id"]) is int
     assert writes == []
@@ -127,6 +138,21 @@ async def test_duplicates_are_rejected_before_probe(hass, entry, unit):
     assert unit.read_events == []
 
 
+async def test_entries_on_the_same_host_share_a_title(hass, unit):
+    with patch(
+        "custom_components.comfoconnect_pro.async_setup_entry", return_value=True
+    ):
+        for port in (502, 1502):
+            result = await hass.config_entries.flow.async_init(
+                DOMAIN,
+                context={"source": "user"},
+                data={**CONNECTION_DATA, "port": port},
+            )
+            assert result["type"] is FlowResultType.CREATE_ENTRY
+            assert result["title"] == "Zehnder ComfoConnect Pro at gateway.local"
+        await hass.async_block_till_done()
+
+
 @pytest.mark.parametrize(
     "updates",
     [
@@ -158,6 +184,7 @@ async def test_reconfigure_preserves_entry_and_validates_before_change(
     )
     assert result["errors"] == {"base": "no_ventilation_unit"}
     assert entry.data["host"] == "gateway.local"
+    assert entry.title == "ComfoAir Q600"
     unit.input[0] = 0
     with patch(
         "custom_components.comfoconnect_pro.async_setup_entry", return_value=True
@@ -168,6 +195,7 @@ async def test_reconfigure_preserves_entry_and_validates_before_change(
         await hass.async_block_till_done()
     assert result["reason"] == "reconfigure_successful"
     assert entry.data["host"] == "new.local"
+    assert entry.title == "Zehnder ComfoConnect Pro at new.local"
 
 
 async def test_reconfigure_cannot_take_another_entry_endpoint(hass, entry):
@@ -180,18 +208,6 @@ async def test_reconfigure_cannot_take_another_entry_endpoint(hass, entry):
         data={**CONNECTION_DATA, "host": "other.local"},
     )
     assert result["reason"] == "already_configured"
-
-
-@pytest.mark.parametrize(
-    "host,expected",
-    [
-        ("  GATEWAY.local. ", "gateway.local"),
-        ("192.168.1.5", "192.168.1.5"),
-        ("[2001:0DB8::1]", "2001:db8::1"),
-    ],
-)
-def test_normalize_hosts(host, expected):
-    assert normalize_host(host) == expected
 
 
 def test_schema_defaults():

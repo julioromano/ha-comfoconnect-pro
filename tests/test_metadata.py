@@ -20,6 +20,9 @@ def test_metadata_matches_project_and_minimum_version():
     manifest = json.loads((COMPONENT / "manifest.json").read_text())
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())
     hacs = json.loads((ROOT / "hacs.json").read_text())
+    strings = json.loads((COMPONENT / "strings.json").read_text())
+    name = "Zehnder ComfoConnect Pro"
+    assert manifest["name"] == hacs["name"] == strings["title"] == name
     assert manifest["version"] == project["project"]["version"]
     assert hacs["homeassistant"] == MIN_HA_VERSION
     assert manifest["dependencies"] == ["modbus"]

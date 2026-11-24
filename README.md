@@ -1,4 +1,4 @@
-# Zehnder ComfoConnect PRO Modbus
+# Zehnder ComfoConnect Pro
 
 <img src="custom_components/comfoconnect_pro/brand/logo.png" alt="Zehnder" width="206">
 
@@ -65,7 +65,7 @@ The unit manuals explain operating behavior; they do not expose additional Modbu
 
    Replace `USER` and `HA_HOST` with your HA SSH login and address. The resulting file must be `/config/custom_components/comfoconnect_pro/manifest.json`. For HA Container, replace `/config` with the host directory mounted as `/config`.
 2. Restart Home Assistant. With the HA OS Terminal & SSH app, you can run `ssh USER@HA_HOST 'ha core restart'`.
-3. Open **Settings → Devices & services → Add integration** and choose **Zehnder ComfoConnect PRO Modbus**.
+3. Open **Settings → Devices & services → Add integration** and choose **Zehnder ComfoConnect Pro**.
 4. Enter the **gateway's** hostname/IP, TCP port (default `502`), unit ID (default `1`) and select your connected ventilation model: **Q350, Q450, Q600, Flex 250 or Flex 350**. The default selection remains Q600; change it to match your unit.
 
 For a custom SSH port, add `-p PORT` to `ssh` and `-P PORT` to `scp`. If SCP reports an unavailable SFTP subsystem, add `-O` to `scp`.
@@ -91,13 +91,19 @@ The HA form asks for:
 
 Setup performs a read-only connection-status probe. Select the actual model yourself: this register map cannot verify the selected model, identify its serial number or detect installed accessories. A successful probe confirms interface availability only.
 
-Use **Reconfigure** on the integration to change an address, port or unit ID, or correct the model for the same installation. Common entity and device identifiers, custom names and refresh options remain stable. Default titles and device metadata follow the selected model. Changing Q600 to another model removes the inapplicable ComfoCool entity from the registry and stops its reads and writes; update automations referring to it. Returning to Q600 recreates it with the same unique ID, subject to HA's registry restoration rules. Failed connection validation leaves the saved configuration and registry intact.
+New entries use the title **Zehnder ComfoConnect Pro at host.domain**, with the normalized hostname or IP address. Entries on the same host can share a title. The device defaults to **Ventilation** and shows the selected model.
+
+Use **Reconfigure** on the integration to change an address, port or unit ID, or correct the model for the same installation. Existing entries keep their title and device name until a successful Reconfigure sets the host-based title and the **Ventilation** default device name. This replaces any custom entry title. Existing device and entity IDs, custom device and entity names, and refresh options are preserved. Failed connection validation leaves the saved configuration and registry intact.
+
+Changing Q600 to another model removes the inapplicable ComfoCool entity from the registry and stops its reads and writes. Update automations referring to it. Returning to Q600 recreates it with the same unique ID, subject to HA's registry restoration rules.
 
 Duplicate normalized host/port/unit combinations are rejected regardless of model. DNS aliases and an IP address pointing to the same gateway cannot be recognized as the same physical device; use a consistent endpoint spelling across integrations to share the connection.
 
 Use **Configure** on the integration entry to set its **Refresh interval** in seconds. The default and minimum are **5 seconds**, and longer intervals must be whole seconds. Saving a changed interval automatically reloads that entry and preserves its entities and automations. Existing entries without a saved interval also use the 5-second default.
 
 ## Entities
+
+Newly created entities normally use the `ventilation_` prefix, as in `sensor.ventilation_airflow`. Find the actual entity IDs on the integration's device page.
 
 The integration registers entities on one ventilation device: **40 for Q600** (12 disabled accessories), or **39 for the other four models** (11 disabled accessories). Inapplicable entities are omitted, rather than hidden or offered for manual enabling. Supported accessory entities start disabled and are not polled until enabled; enable only the relevant ones in the entity settings if those accessories are installed. Home Assistant may reload the entry after an entity is enabled. Enabled accessories are populated after platform setup and on subsequent polls. A successful read of zero does not prove an accessory is installed. The [register inventory](docs/register-map.md#input-registers--fc04-read-only) maps every entity and protocol action to its register.
 
@@ -148,7 +154,7 @@ Download diagnostics from the integration's menu for the configured model, decod
 
 Back up your YAML and record existing entity references before migration. Add the integration, select the actual model, enable only installed accessories, then update dashboards, scripts and automations to use its entities. Remove or disable the old hub and template controls before returning automations to normal operation. YAML hubs use a separate connection and their entities are not automatically adopted by this integration. History is not automatically transferred. Existing Q600 entries of this custom integration need no configuration migration and keep their identities when upgraded. Reconfiguration preserves common identities; correcting the model can remove an inapplicable entity as described above.
 
-Actual entity IDs can differ because of custom names or suffixes. Find them on the integration's device page. New installations normally use the prefix `comfoair_q350`, `comfoair_q450`, `comfoair_q600`, `comfoair_flex_250` or `comfoair_flex_350`; the earlier YAML used `comfoair_q`. Existing common entity IDs retain their original prefix after a model correction. Replace direct YAML `modbus.write_register`/`modbus.write_coil` calls with the corresponding `select.select_option`, `number.set_value`, `switch.turn_on`/`switch.turn_off`, or `button.press` action.
+Replace direct YAML `modbus.write_register`/`modbus.write_coil` calls with the corresponding `select.select_option`, `number.set_value`, `switch.turn_on`/`switch.turn_off`, or `button.press` action.
 
 The five holding-register sensors are replaced by the states of their controls:
 

@@ -1,4 +1,4 @@
-"""Zehnder ComfoConnect PRO Modbus TCP integration."""
+"""Zehnder ComfoConnect Pro integration using Modbus TCP."""
 
 from awesomeversion import AwesomeVersion
 from homeassistant.components.modbus import async_get_unit
