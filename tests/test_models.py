@@ -30,10 +30,8 @@ MODEL_CASES = (
 pytestmark = pytest.mark.usefixtures("enable_custom_integrations", "mock_connection")
 
 
-@pytest.mark.parametrize("model,name,cooling", MODEL_CASES)
-async def test_model_setup_is_read_only_and_uses_selected_title(
-    hass, unit, model, name, cooling
-):
+@pytest.mark.parametrize("model", [model for model, _, _ in MODEL_CASES])
+async def test_model_setup_is_read_only_and_uses_host_title(hass, unit, model):
     writes = []
     unit.on_write(writes.append)
     with patch(
@@ -46,7 +44,7 @@ async def test_model_setup_is_read_only_and_uses_selected_title(
         )
         await hass.async_block_till_done()
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == name
+    assert result["title"] == "Zehnder ComfoConnect Pro at gateway.local"
     assert result["data"]["model"] == model
     assert [(r.register_type, r.address, r.count) for r in unit.read_events] == [
         ("input", 0, 1)
@@ -78,7 +76,12 @@ async def test_model_entities_and_accessory_defaults(
     assert len({item.device_id for item in entities}) == 1
     device = dr.async_get(hass).async_get(entities[0].device_id)
     assert device.model == name
-    assert device.name == name
+    assert device.name == "Ventilation"
+    assert device.identifiers == {(DOMAIN, entry.entry_id)}
+    assert (
+        registry.async_get_entity_id("sensor", DOMAIN, f"{entry.entry_id}_airflow")
+        == "sensor.ventilation_airflow"
+    )
     assert (
         bool(
             registry.async_get_entity_id(
@@ -146,7 +149,7 @@ async def test_reconfigure_model_round_trip_preserves_common_entities(
     registry = er.async_get(hass)
     hass.config_entries.async_update_entry(
         entry,
-        title="Ventilation" if custom_title else entry.title,
+        title="My entry" if custom_title else entry.title,
         options={"scan_interval": 30},
     )
     cooling_id = registry.async_get_entity_id(
@@ -209,7 +212,7 @@ async def test_reconfigure_model_round_trip_preserves_common_entities(
         assert result["reason"] == "reconfigure_successful"
         await hass.async_block_till_done()
         assert entry.state is ConfigEntryState.LOADED
-        assert entry.title == ("Ventilation" if custom_title else name)
+        assert entry.title == "Zehnder ComfoConnect Pro at gateway.local"
         assert entry.options == {"scan_interval": 30}
         assert entry.runtime_data.update_interval == timedelta(seconds=30)
         after = {
@@ -228,6 +231,7 @@ async def test_reconfigure_model_round_trip_preserves_common_entities(
         assert registry.async_get(other_cooling.entity_id) is not None
         device = dr.async_get(hass).async_get(device_id)
         assert device.model == name
+        assert device.name == "Ventilation"
         assert device.name_by_user == "My ventilation"
         assert entry.runtime_data.data.values["room_temperature"] == 21.5
         if not cooling:

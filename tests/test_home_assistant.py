@@ -14,6 +14,7 @@ from homeassistant.util import dt as dt_util
 from modbus_connection.exceptions import IllegalDataAddressError, ModbusTimeoutError
 from pytest_homeassistant_custom_component.common import async_fire_time_changed
 
+from custom_components.comfoconnect_pro.const import DOMAIN
 from custom_components.comfoconnect_pro.diagnostics import (
     async_get_config_entry_diagnostics,
 )
@@ -264,29 +265,61 @@ async def test_unload_releases_connection(hass, configured, connection):
     assert not connection.connected
 
 
-async def test_loaded_reconfigure_keeps_entity_and_device_identity(hass, configured):
-    hass.config_entries.async_update_entry(configured, options={"scan_interval": 30})
+async def test_legacy_names_change_on_reconfigure_with_stable_ids(
+    hass, entry, mock_connection, unit, enable_custom_integrations
+):
+    hass.config_entries.async_update_entry(entry, options={"scan_interval": 30})
+    devices = dr.async_get(hass)
+    device = devices.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, entry.entry_id)},
+        manufacturer="Zehnder",
+        model="ComfoAir Q600",
+        name="ComfoAir Q600",
+    )
     registry = er.async_get(hass)
+    registry.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        f"{entry.entry_id}_airflow",
+        config_entry=entry,
+        device_id=device.id,
+        suggested_object_id="comfoair_q600_airflow",
+    )
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert entry.title == "ComfoAir Q600"
+    assert devices.async_get(device.id).name == "ComfoAir Q600"
+    assert entity_id(hass, entry, "airflow", "sensor") == "sensor.comfoair_q600_airflow"
     before = {
         item.unique_id: (item.entity_id, item.device_id)
-        for item in er.async_entries_for_config_entry(registry, configured.entry_id)
+        for item in er.async_entries_for_config_entry(registry, entry.entry_id)
     }
+    unit.input[0] = 50
     result = await hass.config_entries.flow.async_init(
-        "comfoconnect_pro",
-        context={"source": "reconfigure", "entry_id": configured.entry_id},
-        data={**configured.data, "host": "new-gateway.local"},
+        DOMAIN,
+        context={"source": "reconfigure", "entry_id": entry.entry_id},
+        data=dict(entry.data),
+    )
+    assert result["errors"] == {"base": "no_ventilation_unit"}
+    assert entry.title == "ComfoAir Q600"
+    assert devices.async_get(device.id).name == "ComfoAir Q600"
+    unit.input[0] = 0
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], dict(entry.data)
     )
     assert result["reason"] == "reconfigure_successful"
     await hass.async_block_till_done()
     after = {
         item.unique_id: (item.entity_id, item.device_id)
-        for item in er.async_entries_for_config_entry(registry, configured.entry_id)
+        for item in er.async_entries_for_config_entry(registry, entry.entry_id)
     }
     assert before == after
-    assert configured.data["host"] == "new-gateway.local"
-    assert configured.state is ConfigEntryState.LOADED
-    assert configured.options == {"scan_interval": 30}
-    assert configured.runtime_data.update_interval == timedelta(seconds=30)
+    assert entry.title == "Zehnder ComfoConnect Pro at gateway.local"
+    assert devices.async_get(device.id).name == "Ventilation"
+    assert entry.state is ConfigEntryState.LOADED
+    assert entry.options == {"scan_interval": 30}
+    assert entry.runtime_data.update_interval == timedelta(seconds=30)
 
 
 async def test_unknown_connection_status_is_preserved(hass, configured, unit):

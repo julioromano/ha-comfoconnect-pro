@@ -1,6 +1,6 @@
 {
   "domain": "comfoconnect_pro",
-  "name": "Zehnder ComfoConnect PRO Modbus",
+  "name": "Zehnder ComfoConnect Pro",
   "codeowners": ["@julioromano"],
   "config_flow": true,
   "dependencies": ["modbus"],

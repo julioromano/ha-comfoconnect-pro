@@ -3,7 +3,8 @@
 from homeassistant.const import Platform
 
 DOMAIN = "comfoconnect_pro"
-NAME = "Zehnder ComfoConnect PRO Modbus"
+NAME = "Zehnder ComfoConnect Pro"
+DEFAULT_DEVICE_NAME = "Ventilation"
 MIN_HA_VERSION = "2026.10.2"
 CONF_UNIT_ID = "unit_id"
 DEFAULT_PORT = 502

@@ -18,6 +18,7 @@ from homeassistant.config_entries import (
 from homeassistant.const import CONF_HOST, CONF_MODEL, CONF_PORT, CONF_SCAN_INTERVAL
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.selector import (
     NumberSelector,  # pyright: ignore[reportUnknownVariableType]
     NumberSelectorConfig,
@@ -31,11 +32,13 @@ from modbus_connection import ModbusError, ModbusTcpParams
 
 from .const import (
     CONF_UNIT_ID,
+    DEFAULT_DEVICE_NAME,
     DEFAULT_PORT,
     DEFAULT_SCAN_INTERVAL_SECONDS,
     DEFAULT_UNIT_ID,
     DOMAIN,
     MIN_SCAN_INTERVAL_SECONDS,
+    NAME,
 )
 from .models import MODEL_Q600, MODELS
 from .protocol import CONNECTION_STATES, ComfoAir
@@ -152,19 +155,20 @@ class ComfoConnectConfigFlow(ConfigFlow, domain=DOMAIN):
                 error = await self._async_validate(data)
                 if error:
                     errors["base"] = error
-                elif entry is not None:
-                    # Preserve custom entry titles when correcting the model.
-                    title = (
-                        MODELS[data[CONF_MODEL]].name
-                        if entry.title == MODELS[entry.data[CONF_MODEL]].name
-                        else entry.title
-                    )
+                else:
+                    title = f"{NAME} at {data[CONF_HOST]}"
+                    if entry is None:
+                        return self.async_create_entry(title=title, data=data)
+
+                    registry = dr.async_get(self.hass)
+                    if device := registry.async_get_device_by_identifier(
+                        (DOMAIN, entry.entry_id), entry.entry_id
+                    ):
+                        _ = registry.async_update_device(
+                            device.id, name=DEFAULT_DEVICE_NAME
+                        )
                     return self.async_update_reload_and_abort(
                         entry, title=title, data_updates=data
-                    )
-                else:
-                    return self.async_create_entry(
-                        title=MODELS[data[CONF_MODEL]].name, data=data
                     )
         schema = (
             self.add_suggested_values_to_schema(DATA_SCHEMA, entry.data)

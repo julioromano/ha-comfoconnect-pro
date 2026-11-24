@@ -4,7 +4,7 @@
 
 ## Repository settings
 
-Keep the repository public, enable issues and Actions, set its description to "Home Assistant integration for Zehnder ComfoConnect PRO Modbus TCP" and add the topics `home-assistant`, `hacs`, `zehnder`, `comfoconnect-pro` and `modbus`. Keep HACS validation enabled without ignores; repository settings are part of validation.
+Keep the repository public, enable issues and Actions, set its description to "Home Assistant integration for Zehnder ComfoConnect Pro using Modbus TCP" and add the topics `home-assistant`, `hacs`, `zehnder`, `comfoconnect-pro` and `modbus`. Keep HACS validation enabled without ignores; repository settings are part of validation.
 
 Require up-to-date pull requests, squash merges and four passing GitHub Actions checks on `main`:
 
